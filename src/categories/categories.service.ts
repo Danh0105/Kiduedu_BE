@@ -4,11 +4,12 @@ import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+
 @Injectable()
 export class CategoriesService {
   constructor(
     @InjectRepository(Category)
-    private readonly categoryRepo: Repository<Category>
+    private readonly categoryRepo: Repository<Category>,
   ) { }
 
   async create(dto: CreateCategoryDto): Promise<Category> {
@@ -30,17 +31,17 @@ export class CategoriesService {
 
   async findAll(): Promise<Category[]> {
     return this.categoryRepo.find({
-      relations: ["parent", "children"],
+      relations: ['parent', 'children'],
     });
   }
 
   async findOne(id: number): Promise<Category> {
     const category = await this.categoryRepo.findOne({
       where: { category_id: id },
-      relations: ["parent", "children"],
+      relations: ['parent', 'children'],
     });
     if (!category) {
-      throw new NotFoundException("Category not found");
+      throw new NotFoundException('Category not found');
     }
     return category;
   }
@@ -53,7 +54,7 @@ export class CategoriesService {
 
     if (dto.parent_category_id !== undefined) {
       const parent = await this.categoryRepo.findOneBy({ category_id: dto.parent_category_id });
-      if (!parent) throw new NotFoundException("Parent category not found");
+      if (!parent) throw new NotFoundException('Parent category not found');
       category.parent = parent;
     }
 

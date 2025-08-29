@@ -5,10 +5,10 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ProductModule } from './products/product.module';
 import { CategoriesModule } from './categories/category.module';
-import { Category } from './categories/entities/category.entity';
 import { OrdersModule } from './orders/order.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { CartModule } from './cart/cart.module';
+import { StatisticsModule } from './statistics/statistics.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -21,7 +21,6 @@ import { CartModule } from './cart/cart.module';
       autoLoadEntities: true,
       synchronize: true,
       migrations: ['dist/migrations/*.js'],
-      entities: [Category],
     }),
     AuthModule,
     ProductModule,
@@ -29,8 +28,10 @@ import { CartModule } from './cart/cart.module';
     OrdersModule,
     PromotionsModule,
     CartModule,
+    StatisticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule { }
+

@@ -1,28 +1,46 @@
-import { Controller, Get, Post, Param, Delete, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Put,
+  Delete,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
+import { Public } from '../auth/public.decorator';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) { }
+  @Public()
+  @Post()
+  async create(@Body() body: any): Promise<Order> {
+    return this.ordersService.create(body);
+  }
 
   @Get()
-  findAll(): Promise<Order[]> {
+  async findAll(): Promise<Order[]> {
     return this.ordersService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number): Promise<Order> {
+  async findOne(@Param('id') id: number): Promise<Order> {
     return this.ordersService.findOne(+id);
   }
 
-  @Post()
-  create(@Body() body: Partial<Order>): Promise<Order> {
-    return this.ordersService.create(body);
+  @Put(':id/status')
+  async updateStatus(
+    @Param('id') id: number,
+    @Body() body: { status: string },
+  ): Promise<Order> {
+    return this.ordersService.updateStatus(+id, body.status);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: number): Promise<void> {
-    return this.ordersService.remove(+id);
+  async remove(@Param('id') id: number): Promise<{ message: string }> {
+    await this.ordersService.remove(+id);
+    return { message: 'Order deleted successfully' };
   }
 }

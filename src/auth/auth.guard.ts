@@ -1,4 +1,3 @@
-
 import {
   CanActivate,
   ExecutionContext,
@@ -6,10 +5,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { jwtConstants } from './auth.constants.js';
 import { Request } from 'express';
-import { IS_PUBLIC_KEY } from './public.decorator';
 import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from './public.decorator';
+import { jwtConstants } from './auth.constants';
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -18,26 +18,29 @@ export class AuthGuard implements CanActivate {
   ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // 🔓 Check nếu route/class được đánh dấu @Public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
+
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Token not found');
     }
+
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: jwtConstants.secret,
       });
-
-      request['user'] = payload;
-    } catch {
-      throw new UnauthorizedException();
+      request['user'] = payload; // 👤 gắn user payload vào request
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired token');
     }
+
     return true;
   }
 
