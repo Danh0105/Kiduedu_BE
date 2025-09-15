@@ -9,6 +9,7 @@ async function bootstrap() {
     origin: 'http://localhost:3001',
     credentials: true,
   });
-  await app.listen(3000);
+  await app.listen(3000, '0.0.0.0');
+
 }
 bootstrap();
