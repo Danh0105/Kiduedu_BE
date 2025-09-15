@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsIn } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsIn, IsInt, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateProductImageDto } from './product-image.dto';
 
 export class CreateProductDto {
   @IsString()
@@ -7,12 +8,17 @@ export class CreateProductDto {
   product_name: string;
 
   @IsString()
-  @IsNotEmpty()
-  sku: string;
+  @IsOptional()
+  short_description?: string;
 
   @IsString()
   @IsOptional()
-  description?: string;
+  long_description?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  status?: number;
 
   @Type(() => Number)
   @IsNumber()
@@ -28,8 +34,8 @@ export class CreateProductDto {
   @IsOptional()
   category_id?: number;
 
-  @IsString()
-  @IsIn(['computer', 'refrigeration', 'robotics'])
-  @IsOptional()
-  product_type?: 'computer' | 'refrigeration' | 'robotics';
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductImageDto)
+  images: CreateProductImageDto[];
 }

@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class InitFullEavSchema1693234567890 implements MigrationInterface {
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`
             -- =====================================================================
             -- SCHEMA HOÀN CHỈNH: MÔ HÌNH EAV + CARTS + ORDERS + PROMOTIONS
             -- =====================================================================
@@ -53,8 +53,10 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
                 "product_id" SERIAL PRIMARY KEY,
                 "product_name" VARCHAR(255) NOT NULL,
                 "sku" VARCHAR(50) UNIQUE NOT NULL,
-                "description" TEXT,
+                "long_description" TEXT,
+                "short_description" TEXT,
                 "price" DECIMAL(12, 2) NOT NULL CHECK(price >= 0),
+                 "status" INTEGER NOT NULL DEFAULT 1 CHECK(status IN (0, 1, 2)), 
                 "stock_quantity" INT NOT NULL DEFAULT 0 CHECK(stock_quantity >= 0),
                 "category_id" INT NOT NULL REFERENCES "categories"("category_id") ON DELETE RESTRICT,
                 "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -67,7 +69,10 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
             CREATE TABLE IF NOT EXISTS "attributes"(
                 "attribute_id" SERIAL PRIMARY KEY,
                 "attribute_name" VARCHAR(100) UNIQUE NOT NULL,
-                "value_type" VARCHAR(20) NOT NULL CHECK(value_type IN('string', 'number', 'boolean', 'date'))
+                "value_type" VARCHAR(20) NOT NULL CHECK(value_type IN('string', 'number', 'boolean', 'date')),
+                display_name VARCHAR(100),
+                attribute_group VARCHAR(50),
+                is_filterable BOOLEAN NOT NULL DEFAULT FALSE
             );
 
             CREATE TABLE IF NOT EXISTS "category_attributes"(
@@ -233,10 +238,10 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
             CREATE INDEX IF NOT EXISTS idx_promo_applicability_product ON "promotion_applicability"("product_id");
             CREATE INDEX IF NOT EXISTS idx_promo_applicability_category ON "promotion_applicability"("category_id");
         `);
-  }
+    }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`
             DROP TRIGGER IF EXISTS trg_check_value_type ON product_attribute_values;
             DROP TRIGGER IF EXISTS set_timestamp_on_products ON products;
             DROP FUNCTION IF EXISTS enforce_value_type();
@@ -260,5 +265,5 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
             DROP TYPE IF EXISTS discount_type_enum;
             DROP TYPE IF EXISTS banner_position_enum;
         `);
-  }
+    }
 }

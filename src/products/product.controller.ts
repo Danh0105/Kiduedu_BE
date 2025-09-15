@@ -7,14 +7,18 @@ import {
   Put,
   Delete,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Public } from 'src/auth/public.decorator';
+import { plainToInstance } from 'class-transformer';
+import { ProductResponseDto } from './dto/ProductResponse.dto';
+import { PaginatedResponseDto } from './dto/PaginatedResponse.dto';
 
 @Controller('products')
 export class ProductController {
-  constructor(private productService: ProductService) { }
+  constructor(private readonly productService: ProductService) { }
 
   @Public()
   @Post()
@@ -24,32 +28,48 @@ export class ProductController {
       success: true,
       message: 'Product created successfully',
       statusCode: HttpStatus.CREATED,
-      data: product,
+      data: plainToInstance(ProductResponseDto, product, {
+        excludeExtraneousValues: true,
+      }),
     };
   }
 
   @Public()
   @Get()
-  async findAll() {
-    const products = await this.productService.findAll();
-    return {
+  async findAll(@Query('page') page = 1, @Query('limit') limit = 12) {
+    const [products, total] = await this.productService.findAllPaginated(
+      Number(page),
+      Number(limit),
+    );
+
+    return plainToInstance(PaginatedResponseDto<ProductResponseDto>, {
       success: true,
       message: 'Products retrieved successfully',
       statusCode: HttpStatus.OK,
-      data: products,
-    };
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        last_page: Math.ceil(total / limit),
+      },
+      data: plainToInstance(ProductResponseDto, products, {
+        excludeExtraneousValues: true,
+      }),
+    });
   }
 
   @Public()
   @Get(':id')
   async findOne(@Param('id') id: number) {
     const product = await this.productService.findOne(id);
-    return {
+    return plainToInstance(PaginatedResponseDto<ProductResponseDto>, {
       success: true,
-      message: 'Product retrieved successfully',
+      message: 'Products retrieved successfully',
       statusCode: HttpStatus.OK,
-      data: product,
-    };
+      data: plainToInstance(ProductResponseDto, product, {
+        excludeExtraneousValues: true,
+      }),
+    });
   }
 
   @Public()

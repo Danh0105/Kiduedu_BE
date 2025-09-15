@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { Category } from '../../categories/entities/category.entity';
-import { ProductImage } from '../../products/entities/product-image.entity';
+import { ProductImage } from './product-image.entity';
 import { ProductAttributeValue } from '../../products/entities/product-attribute-value.entity';
 import { OrderItem } from '../../orders/entities/order-item.entity';
 
@@ -16,7 +16,13 @@ export class Product {
   sku: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  long_description: string;
+
+  @Column({ type: 'text', nullable: true })
+  short_description: string;
+
+  @Column({ type: 'int', default: 1 })
+  status: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   price: number;
@@ -34,7 +40,7 @@ export class Product {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @OneToMany(() => ProductImage, image => image.product)
+  @OneToMany(() => ProductImage, image => image.product, { cascade: true })
   images: ProductImage[];
 
   @OneToMany(() => ProductAttributeValue, attrValue => attrValue.product)

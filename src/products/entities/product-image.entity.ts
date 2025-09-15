@@ -10,6 +10,7 @@ export class ProductImage {
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
+
   @Column({ length: 255 })
   image_url: string;
 
