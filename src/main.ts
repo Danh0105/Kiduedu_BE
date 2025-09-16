@@ -3,21 +3,16 @@ import { AppModule } from './app.module';
 import 'dotenv/config';
 import "reflect-metadata";
 
-import * as fs from 'fs';
 
 async function bootstrap() {
-  const httpsOptions = {
-    key: fs.readFileSync('./secrets/key.pem'),
-    cert: fs.readFileSync('./secrets/cert.pem'),
-  };
 
-  const app = await NestFactory.create(AppModule, { httpsOptions });
+  const app = await NestFactory.create(AppModule);
 
   app.enableCors({
     origin: 'https://kidoedu.vn',
+    methods: 'GET,POST,PUT,DELETE,OPTIONS',
+    allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
     credentials: true,
   });
-
-  await app.listen(443, '0.0.0.0'); // HTTPS mặc định chạy port 443
 }
 bootstrap();
