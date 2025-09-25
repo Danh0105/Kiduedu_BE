@@ -17,10 +17,7 @@ export class UserProfileIndividual {
   user: User;
 
   @Column({ length: 50 })
-  first_name: string;
-
-  @Column({ length: 50 })
-  last_name: string;
+  full_name: string;
 
   @Column({ type: 'date', nullable: true })
   date_of_birth: Date;

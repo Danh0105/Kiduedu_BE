@@ -34,15 +34,12 @@ export class UsersService {
   async createUser(data: {
     username: string;
     email: string;
-    password: string;
-    fullName?: string;
     role?: string;
     customerType?: CustomerType;
     companyName?: string;
     taxId?: string;
     businessEmail?: string;
-    firstName?: string;
-    lastName?: string;
+    fullName?: string;
     dateOfBirth?: Date;
     address?: {
       full_name: string;
@@ -55,14 +52,11 @@ export class UsersService {
     };
   }): Promise<User> {
     // 1. Hash password
-    const password_hash = await bcrypt.hash(data.password, 10);
 
     // 2. Tạo User
     const user = this.usersRepository.create({
       username: data.username,
       email: data.email,
-      password_hash,
-      full_name: data.fullName ?? null,
       role: data.role ?? 'customer',
       customer_type: data.customerType ?? CustomerType.INDIVIDUAL,
     } as Partial<User>);
@@ -99,8 +93,7 @@ export class UsersService {
     // Nếu là cá nhân thì thêm vào user_profile_individual
     if (data.customerType === CustomerType.INDIVIDUAL) {
       const individualProfile = this.individualRepository.create({
-        first_name: data.firstName ?? '',
-        last_name: data.lastName ?? '',
+        full_name: data.fullName ?? '',
         ...(data.dateOfBirth ? { date_of_birth: data.dateOfBirth } : {}), // 👈 chỉ set nếu có
         user: savedUser, // 👈 quan hệ sẽ tự map user_id
       });
