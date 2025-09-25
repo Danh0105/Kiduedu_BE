@@ -13,7 +13,7 @@ import { StatisticsModule } from './statistics/statistics.module';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
+      host: '163.223.211.23',
       port: 5432,
       username: 'admin',
       password: 'secret',
