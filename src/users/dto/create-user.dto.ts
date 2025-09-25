@@ -40,9 +40,6 @@ export class CreateUserDto {
   fullName?: string;
 
   @IsOptional()
-  phoneNumber?: string;
-
-  @IsOptional()
   role?: string;
 
   @IsEnum(CustomerType)

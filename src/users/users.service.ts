@@ -36,7 +36,6 @@ export class UsersService {
     email: string;
     password: string;
     fullName?: string;
-    phoneNumber?: string;
     role?: string;
     customerType?: CustomerType;
     companyName?: string;
@@ -64,7 +63,6 @@ export class UsersService {
       email: data.email,
       password_hash,
       full_name: data.fullName ?? null,
-      phone_number: data.phoneNumber ?? null,
       role: data.role ?? 'customer',
       customer_type: data.customerType ?? CustomerType.INDIVIDUAL,
     } as Partial<User>);

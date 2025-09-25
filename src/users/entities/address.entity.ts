@@ -34,4 +34,6 @@ export class Address {
 
   @Column({ default: false })
   is_default: boolean;
+
+
 }
