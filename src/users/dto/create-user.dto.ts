@@ -1,5 +1,12 @@
-// src/users/dto/create-user.dto.ts
-import { IsEmail, IsNotEmpty, IsOptional, IsEnum, ValidateNested, IsArray } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  ValidateNested,
+  IsArray,
+  IsDateString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CustomerType } from '../entities/user.entity';
 
@@ -54,6 +61,11 @@ export class CreateUserDto {
 
   @IsOptional()
   businessEmail?: string;
+
+  // ✅ Ngày sinh (cho cá nhân)
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string; // ISO format: "2025-09-05"
 
   // Địa chỉ mặc định
   @ValidateNested()

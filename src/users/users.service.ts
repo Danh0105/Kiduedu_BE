@@ -44,7 +44,7 @@ export class UsersService {
     taxId?: string;
     businessEmail?: string;
     fullName?: string;
-    dateOfBirth?: Date;
+    dateOfBirth?: string;
     address?: {
       full_name: string;
       phone_number: string;
@@ -61,54 +61,57 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      // 1️⃣ Tạo User
-      const user = queryRunner.manager.create(User, {
-        username: data.username,
-        email: data.email,
-        role: data.role ?? 'customer',
-        customer_type: data.customerType ?? CustomerType.INDIVIDUAL,
+      // 1️⃣ Kiểm tra user tồn tại theo email
+      let savedUser = await this.usersRepository.findOne({
+        where: { email: data.email },
+        relations: ['cart', 'addresses'],
       });
-      const savedUser = await queryRunner.manager.save(user);
 
-      // 2️⃣ Tạo Cart mặc định
-      const cart = queryRunner.manager.create(Cart, { user: savedUser });
-      await queryRunner.manager.save(cart);
-
-      // 3️⃣ Nếu có địa chỉ thì lưu Address
-      if (data.address) {
-        const address = queryRunner.manager.create(Address, {
-          ...data.address,
-          user: savedUser,
+      if (!savedUser) {
+        // Nếu chưa có → tạo mới
+        const user = queryRunner.manager.create(User, {
+          username: data.username,
+          email: data.email,
+          role: data.role ?? 'customer',
+          customer_type: data.customerType ?? CustomerType.INDIVIDUAL,
         });
-        await queryRunner.manager.save(address);
-      }
+        savedUser = await queryRunner.manager.save(user);
 
-      // 4️⃣ Nếu là doanh nghiệp thì lưu profile business
-      if (data.customerType === CustomerType.BUSINESS) {
-        const businessProfile = queryRunner.manager.create(UserProfileBusiness, {
-          user_id: savedUser.user_id,
-          company_name: data.companyName,
-          tax_id: data.taxId,
-          email: data.businessEmail,
-          user: savedUser,
-        });
-        await queryRunner.manager.save(businessProfile);
-      }
+        // 2️⃣ Tạo Cart mặc định
+        const cart = queryRunner.manager.create(Cart, { user: savedUser });
+        await queryRunner.manager.save(cart);
 
-      // 5️⃣ Nếu là cá nhân thì lưu profile individual
-      if (
-        !data.customerType ||
-        data.customerType === CustomerType.INDIVIDUAL
-      ) {
-        const individualProfile = queryRunner.manager.create(
-          UserProfileIndividual,
-          {
-            full_name: data.fullName ?? '',
-            ...(data.dateOfBirth ? { date_of_birth: data.dateOfBirth } : {}),
+        // 3️⃣ Nếu có địa chỉ thì lưu Address
+        if (data.address) {
+          const address = queryRunner.manager.create(Address, {
+            ...data.address,
             user: savedUser,
-          },
-        );
-        await queryRunner.manager.save(individualProfile);
+          });
+          await queryRunner.manager.save(address);
+        }
+
+        // 4️⃣ Profile business
+        if (data.customerType === CustomerType.BUSINESS) {
+          const businessProfile = queryRunner.manager.create(UserProfileBusiness, {
+            user_id: savedUser.user_id,
+            company_name: data.companyName,
+            tax_id: data.taxId,
+            email: data.businessEmail,
+            user: savedUser,
+          });
+          await queryRunner.manager.save(businessProfile);
+        }
+
+        // 5️⃣ Profile individual
+        if (data.customerType === CustomerType.INDIVIDUAL) {
+          const individualProfile = this.individualRepository.create({
+            full_name: data.fullName ?? '',
+            ...(data.dateOfBirth ? { date_of_birth: new Date(data.dateOfBirth) } : {}),
+            user: savedUser,
+          });
+
+          await this.individualRepository.save(individualProfile);
+        }
       }
 
       // 6️⃣ Tính toán order
@@ -116,7 +119,7 @@ export class UsersService {
         (sum, i) => sum + i.price_per_unit * i.quantity,
         0,
       );
-      const shipping_fee = 38000; // ví dụ phí ship
+      const shipping_fee = 38000;
       const total = subtotal + shipping_fee;
 
       const order = queryRunner.manager.create(Order, {
@@ -144,11 +147,11 @@ export class UsersService {
 
       return { user: savedUser, order: savedOrder, items: orderItems };
     } catch (error) {
-      // ❌ Rollback nếu có lỗi
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
     }
   }
+
 }
