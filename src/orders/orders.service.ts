@@ -31,7 +31,6 @@ export class OrdersService {
     // ✅ Tạo order
     const order = this.ordersRepo.create({
       user: { user_id: data.user_id } as any, // dùng relation
-      shipping_address: data.shipping_address,
       subtotal,
       discount_amount: discount,
       total_amount: total,

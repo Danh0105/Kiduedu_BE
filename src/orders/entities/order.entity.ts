@@ -12,9 +12,6 @@ export class Order {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column()
-  shipping_address: string;
-
   @Column({ type: 'decimal', precision: 15, scale: 2 })
   subtotal: number;
 

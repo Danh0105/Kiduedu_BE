@@ -1,5 +1,5 @@
 // src/users/dto/create-user.dto.ts
-import { IsEmail, IsNotEmpty, IsOptional, IsEnum, ValidateNested } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsEnum, ValidateNested, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CustomerType } from '../entities/user.entity';
 
@@ -59,4 +59,7 @@ export class CreateUserDto {
   @ValidateNested()
   @Type(() => AddressDto)
   address: AddressDto;
+
+  @IsArray()
+  items: { product_id: number; quantity: number; price_per_unit: number }[];
 }
