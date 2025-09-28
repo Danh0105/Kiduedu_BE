@@ -1,15 +1,16 @@
-const { DataSource } = require("typeorm");
+import 'reflect-metadata';
+import { DataSource } from 'typeorm';
 
-const AppDataSource = new DataSource({
-  type: "postgres",
-  host: "localhost",
+export default new DataSource({
+  type: 'postgres',
+  host: '163.223.211.23',
   port: 5432,
-  username: "admin",
-  password: "secret",
-  database: "mydb",
-  entities: [__dirname + "/**/*.entity{.ts,.js}"],
-  migrations: [__dirname + "/migrations/*{.ts,.js}"],
+  username: 'admin',
+  password: 'secret',
+  database: 'mydb',
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
+  migrationsTableName: 'typeorm_migrations', // 👈 tránh trùng với bảng domain `public.migrations`
   synchronize: false,
+  logging: false,
 });
-
-module.exports = AppDataSource;
