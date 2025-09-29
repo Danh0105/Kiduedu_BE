@@ -9,12 +9,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: ['https://kidoedu.edu.vn', 'http://localhost:8082'],
+    origin: ['https://kidoedu.edu.vn', 'http://localhost:8028'],
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
     allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
     credentials: true,
   });
-  await app.listen(8082);
+  await app.listen(8028);
 
 }
 bootstrap();
