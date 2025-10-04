@@ -10,8 +10,8 @@ import { PromotionsModule } from './promotions/promotions.module';
 import { CartModule } from './cart/cart.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { ConfigModule } from '@nestjs/config';
-import { OpenaiModule } from './gpt/openai.module';
-import { MomoModule } from './momo/momo.module';
+/* import { OpenaiModule } from './gpt/openai.module';
+ */import { MomoModule } from './momo/momo.module';
 import { SearchModule } from './search/search.module';
 @Module({
   imports: [
@@ -33,7 +33,7 @@ import { SearchModule } from './search/search.module';
     PromotionsModule,
     CartModule,
     StatisticsModule,
-    OpenaiModule,
+    /*  OpenaiModule, */
     MomoModule,
     SearchModule,
     ConfigModule.forRoot({ isGlobal: true }),
