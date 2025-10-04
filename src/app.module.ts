@@ -13,6 +13,8 @@ import { ConfigModule } from '@nestjs/config';
 import { OpenaiModule } from './gpt/openai.module';
 import { MomoModule } from './momo/momo.module';
 import { SearchModule } from './search/search.module';
+import { SearchController } from './search/search.controller';
+import { SearchService } from './search/search.service';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -38,8 +40,8 @@ import { SearchModule } from './search/search.module';
     SearchModule,
     ConfigModule.forRoot({ isGlobal: true }),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, SearchController],
+  providers: [AppService, SearchService],
 
 })
 export class AppModule { }
