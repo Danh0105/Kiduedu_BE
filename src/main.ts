@@ -7,7 +7,6 @@ import "reflect-metadata";
 async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
   app.enableCors({
     origin: ['https://kidoedu.edu.vn', 'http://localhost:8082', 'http://localhost:3000', 'https://www.kidoedu.edu.vn', 'https://kidoedu.vn'],
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
