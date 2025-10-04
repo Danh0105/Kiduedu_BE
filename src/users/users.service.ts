@@ -1,5 +1,5 @@
-import * as bcrypt from 'bcryptjs';
-import { Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User, CustomerType } from './entities/user.entity';
@@ -9,26 +9,18 @@ import { UserProfileIndividual } from './entities/user_profile_individual.entity
 import { UserProfileBusiness } from './entities/user_profile_business.entity';
 import { Order } from 'src/orders/entities/order.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
+import { Product } from 'src/products/entities/product.entity'; // <-- đảm bảo import đúng path
 
 @Injectable()
 export class UsersService {
   constructor(
-    private dataSource: DataSource, // ✅ thêm DataSource để tạo transaction
+    private readonly dataSource: DataSource,
 
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
-
-    @InjectRepository(Cart)
-    private cartRepository: Repository<Cart>,
-
-    @InjectRepository(Address)
-    private addressRepository: Repository<Address>,
-
-    @InjectRepository(UserProfileBusiness)
-    private businessRepository: Repository<UserProfileBusiness>,
-
-    @InjectRepository(UserProfileIndividual)
-    private individualRepository: Repository<UserProfileIndividual>,
+    @InjectRepository(User) private readonly usersRepository: Repository<User>,
+    @InjectRepository(Cart) private readonly cartRepository: Repository<Cart>,
+    @InjectRepository(Address) private readonly addressRepository: Repository<Address>,
+    @InjectRepository(UserProfileBusiness) private readonly businessRepository: Repository<UserProfileBusiness>,
+    @InjectRepository(UserProfileIndividual) private readonly individualRepository: Repository<UserProfileIndividual>,
   ) { }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -39,12 +31,12 @@ export class UsersService {
     username: string;
     email: string;
     role?: string;
-    customerType?: CustomerType;
+    customerType?: CustomerType; // nếu không truyền => mặc định INDIVIDUAL
     companyName?: string;
     taxId?: string;
     businessEmail?: string;
     fullName?: string;
-    dateOfBirth?: string;
+    dateOfBirth?: string; // YYYY-MM-DD
     address?: {
       full_name: string;
       phone_number: string;
@@ -61,97 +53,111 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      // 1️⃣ Kiểm tra user tồn tại theo email
-      let savedUser = await this.usersRepository.findOne({
+      const mgr = queryRunner.manager;
+      const customerType = data.customerType ?? CustomerType.INDIVIDUAL;
+
+      // 1) Tìm user theo email (ngoài transaction cũng được, nhưng để đồng nhất thì dùng mgr)
+      let savedUser = await mgr.getRepository(User).findOne({
         where: { email: data.email },
         relations: ['cart', 'addresses'],
       });
 
+      // 2) Nếu chưa có user -> tạo mới (toàn bộ bằng mgr)
       if (!savedUser) {
-        // Nếu chưa có → tạo mới
-        const user = queryRunner.manager.create(User, {
+        const user = mgr.create(User, {
           username: data.username,
           email: data.email,
           role: data.role ?? 'customer',
-          customer_type: data.customerType ?? CustomerType.INDIVIDUAL,
+          customer_type: customerType,
         });
-        savedUser = await queryRunner.manager.save(user);
+        savedUser = await mgr.save(user);
 
-        // 2️⃣ Tạo Cart mặc định
-        const cart = queryRunner.manager.create(Cart, { user: savedUser });
-        await queryRunner.manager.save(cart);
+        // Cart
+        const cart = mgr.create(Cart, { user: savedUser });
+        await mgr.save(cart);
 
-        // 3️⃣ Nếu có địa chỉ thì lưu Address
+        // Address
         if (data.address) {
-          const address = queryRunner.manager.create(Address, {
-            ...data.address,
-            user: savedUser,
-          });
-          await queryRunner.manager.save(address);
+          const address = mgr.create(Address, { ...data.address, user: savedUser });
+          await mgr.save(address);
         }
 
-        // 4️⃣ Profile business
-        if (data.customerType === CustomerType.BUSINESS) {
-          const businessProfile = queryRunner.manager.create(UserProfileBusiness, {
-            user_id: savedUser.user_id,
+        // Profile
+        if (customerType === CustomerType.BUSINESS) {
+          const businessProfile = mgr.create(UserProfileBusiness, {
+            user: savedUser, // truyền entity, mgr sẽ gán user_id đúng
             company_name: data.companyName,
             tax_id: data.taxId,
             email: data.businessEmail,
-            user: savedUser,
           });
-          await queryRunner.manager.save(businessProfile);
-        }
-
-        // 5️⃣ Profile individual
-        if (data.customerType === CustomerType.INDIVIDUAL) {
-          const individualProfile = this.individualRepository.create({
+          await mgr.save(businessProfile);
+        } else {
+          const individualProfile = mgr.create(UserProfileIndividual, {
+            user: savedUser,
             full_name: data.fullName ?? '',
             ...(data.dateOfBirth ? { date_of_birth: new Date(data.dateOfBirth) } : {}),
-            user: savedUser,
           });
-
-          await this.individualRepository.save(individualProfile);
+          await mgr.save(individualProfile);
         }
       }
 
-      // 6️⃣ Tính toán order
+      // 3) Validate danh sách product trước khi tạo order items
+      const productIds = (data.items ?? []).map(i => i.product_id);
+      if (productIds.length === 0) {
+        throw new BadRequestException('Items must not be empty');
+      }
+
+      const productRepo = mgr.getRepository(Product);
+      const products = await productRepo.find({
+        where: { product_id: In(productIds) },
+        select: ['product_id', 'price', 'product_name'],
+      });
+
+      const foundIds = new Set(products.map(p => p.product_id));
+      const missing = productIds.filter(id => !foundIds.has(id));
+
+      if (missing.length > 0) {
+        throw new BadRequestException(`Product(s) not found: ${missing.join(', ')}`);
+      }
+
+      // 4) Tính toán order
       const subtotal = data.items.reduce(
-        (sum, i) => sum + i.price_per_unit * i.quantity,
+        (sum, i) => sum + Number(i.price_per_unit) * Number(i.quantity),
         0,
       );
-      const shipping_fee = 38000;
+      const shipping_fee = 0;
       const total = subtotal + shipping_fee;
 
-      const order = queryRunner.manager.create(Order, {
+      const order = mgr.create(Order, {
         user: savedUser,
         subtotal,
         discount_amount: 0,
         total_amount: total,
         status: 'Pending',
       });
-      const savedOrder = await queryRunner.manager.save(order);
+      const savedOrder = await mgr.save(order);
 
-      // 7️⃣ Tạo OrderItems
-      const orderItems = data.items.map((i) =>
-        queryRunner.manager.create(OrderItem, {
+      // 5) Tạo order items (liên kết product bằng entity đã load để chắc chắn qua FK)
+      const itemsEntities = data.items.map(i => {
+        const product = products.find(p => p.product_id === i.product_id)!;
+        return mgr.create(OrderItem, {
           order: savedOrder,
-          product: { product_id: i.product_id } as any,
+          product, // pass entity product để FK chắc chắn đúng
           quantity: i.quantity,
           price_per_unit: i.price_per_unit,
-        }),
-      );
-      await queryRunner.manager.save(orderItems);
+        });
+      });
 
-      // ✅ Commit transaction
+      const savedItems = await mgr.save(itemsEntities);
+
+      // 6) Commit
       await queryRunner.commitTransaction();
-
-      return { user: savedUser, order: savedOrder, items: orderItems };
-    } catch (error) {
+      return { user: savedUser, order: savedOrder, items: savedItems };
+    } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw error;
+      throw err;
     } finally {
       await queryRunner.release();
     }
   }
-
 }

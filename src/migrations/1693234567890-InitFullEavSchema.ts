@@ -1,16 +1,83 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitFullEavSchema1693234567890 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // addresses
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // ---- FTS: chuẩn bị extensions + wrapper IMMUTABLE ----
+    await queryRunner.query(`
+      CREATE EXTENSION IF NOT EXISTS unaccent;
+      CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+      -- Wrapper IMMUTABLE cho unaccent (chốt dictionary theo schema public)
+      CREATE OR REPLACE FUNCTION public.unaccent_imm(text)
+      RETURNS text
+      LANGUAGE sql
+      IMMUTABLE
+      PARALLEL SAFE
+      AS $$
+        SELECT unaccent('public.unaccent'::regdictionary, $1)
+      $$;
+    `);
+
+    // ---- FTS: cột tsvector + trigger cập nhật ----
+    await queryRunner.query(`
+      ALTER TABLE public.products
+      ADD COLUMN IF NOT EXISTS search_vec tsvector;
+
+      CREATE OR REPLACE FUNCTION public.products_search_vec_update()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        NEW.search_vec :=
+          setweight(to_tsvector('simple', public.unaccent_imm(coalesce(NEW.product_name,''))), 'A')
+          ||
+          setweight(
+            to_tsvector('simple',
+              public.unaccent_imm(regexp_replace(coalesce(NEW.short_description,''), '<[^>]+>', ' ', 'g'))
+            ),
+            'B'
+          )
+          ||
+          setweight(
+            to_tsvector('simple',
+              public.unaccent_imm(regexp_replace(coalesce(NEW.long_description,''), '<[^>]+>', ' ', 'g'))
+            ),
+            'C'
+          );
+        RETURN NEW;
+      END
+      $$;
+
+      DROP TRIGGER IF EXISTS trg_products_search_vec_update ON public.products;
+      CREATE TRIGGER trg_products_search_vec_update
+      BEFORE INSERT OR UPDATE ON public.products
+      FOR EACH ROW EXECUTE FUNCTION public.products_search_vec_update();
+    `);
+
+    // ---- FTS: backfill dữ liệu hiện có để fill search_vec ----
+    await queryRunner.query(`UPDATE public.products SET product_id = product_id;`);
+
+    // ---- FTS: indexes (GIN FTS + GIN trigram trên tên không dấu) ----
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS idx_products_search_vec
+        ON public.products USING GIN (search_vec);
+
+      -- functional index + operator class cần 2 lớp ngoặc ((expr) gin_trgm_ops)
+      DROP INDEX IF EXISTS idx_products_name_trgm;
+      CREATE INDEX idx_products_name_trgm
+        ON public.products USING GIN ((public.unaccent_imm(product_name)) gin_trgm_ops);
+    `);
+
+    // ===================== SEED DỮ LIỆU (giữ nguyên của bạn) =====================
+    // addresses
+    await queryRunner.query(`
       INSERT INTO public.addresses (address_id, full_name, phone_number, street, ward, district, city, is_default, "userUserId")
       VALUES (22, 'Nguyen Xuan Danh', '0326968216', '256/10', 'Xã Khánh An', 'Huyện An Phú', 'Tỉnh An Giang', true, 84)
       ON CONFLICT DO NOTHING;
     `);
 
-        // carts
-        await queryRunner.query(`
+    // carts
+    await queryRunner.query(`
       INSERT INTO public.carts (cart_id, created_at, user_id) VALUES
       (1,  '2025-09-18 10:00:46.065957', 10),
       (2,  '2025-09-19 03:09:05.140572', 9),
@@ -18,8 +85,8 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-        // categories
-        await queryRunner.query(`
+    // categories
+    await queryRunner.query(`
       INSERT INTO public.categories (category_id, category_name, description, parent_category_id) VALUES
       (1, 'Robotic', NULL, NULL),
       (2, 'ORC', NULL, 1),
@@ -30,15 +97,15 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-        // migrations (domain table)
-        await queryRunner.query(`
+    // migrations (domain table)
+    await queryRunner.query(`
       INSERT INTO public.migrations (id, "timestamp", name)
       VALUES (1, 1693234567890, 'InitFullEavSchema1693234567890')
       ON CONFLICT DO NOTHING;
     `);
 
-        // orders
-        await queryRunner.query(`
+    // orders
+    await queryRunner.query(`
       INSERT INTO public.orders (order_id, subtotal, discount_amount, total_amount, status, order_date, user_id, promotion_id) VALUES
       (5,  432000.00, 0.00, 470000.00, 'Pending', '2025-09-26 03:35:27.89795', 84, NULL),
       (6,  432000.00, 0.00, 470000.00, 'Pending', '2025-09-26 03:35:56.613784', 9, NULL),
@@ -68,8 +135,8 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-        // order_items
-        await queryRunner.query(`
+    // order_items
+    await queryRunner.query(`
       INSERT INTO public.order_items (order_item_id, quantity, price_per_unit, order_id, product_id) VALUES
       (9,1,108000.00,5,8),(10,1,108000.00,5,6),(11,1,108000.00,5,9),(12,1,108000.00,5,7),
       (13,1,108000.00,6,8),(14,1,108000.00,6,6),(15,1,108000.00,6,9),(16,1,108000.00,6,7),
@@ -99,8 +166,8 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-        // product_images
-        await queryRunner.query(`
+    // product_images
+    await queryRunner.query(`
       INSERT INTO public.product_images (image_id, image_url, alt_text, is_primary, product_id) VALUES
       (1,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995711/dudhjbk1sq1orgm8cynh.png',NULL,false,1),
       (2,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995718/iuhp40d6sfwqxz3cfhxk.png',NULL,false,1),
@@ -124,58 +191,31 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-        // products
-        await queryRunner.query(`
+    // products
+    await queryRunner.query(`
       INSERT INTO public.products
       (product_id, product_name, sku, long_description, short_description, status, price, stock_quantity, created_at, updated_at, category_id)
       VALUES
-      (1, 'Module GPS+BDS ATGM336H (kèm dây, anten giao tiếp UART và hộp)', 'SKU-1757995730604',
-        $$<p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Module GPS BDS ATGM336H định vị có thiết kế nhỏ gọn sử dụng IC chính SoC GNSS AT6558 thế hệ thứ 4, với khả năng tiết kiệm năng lượng vượt trội, mạch bắt tín hiệu định vị và thời gian nên các hệ thống GPS/US, Beidou/CN, GLONASS/RU, Galileo/EU, QZSS/JP, SBAS/enhanced system qua 32 kênh tracking chanel.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Mạch định vị GPS BDS ATGM336H có chuẩn đầu ra tín hiệu của mạch tương thích với các module của Ublox (NEO-6M / NEO-7/ NEO-M8N) nên có thể thay thế dễ dàng, sử dụng chung code mẫu Arduino và phần mềm U-Center trên máy tính, phù hợp với các ứng dụng định vị vị trí và lấy thời gian qua GPS.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Module GPS có 4 chân, và mỗi chân có chức năng như sau:</span></p><table><tbody><tr><td data-row="1"><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">STT</strong></td><td data-row="1"><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Chân</strong></td><td data-row="1"><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Chức năng</strong></td></tr><tr><td data-row="2"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">1</span></td><td data-row="2"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">GND</span></td><td data-row="2"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Nối đất</span></td></tr><tr><td data-row="3"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">2</span></td><td data-row="3"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">VCC</span></td><td data-row="3"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Cấp nguồn (3.3V)</span></td></tr><tr><td data-row="4"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">3</span></td><td data-row="4"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">RX</span></td><td data-row="4"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Đầu nhận tín hiệu</span></td></tr><tr><td data-row="5"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">4</span></td><td data-row="5"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">TX</span></td><td data-row="5"><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Đầu gửi tín hiệu</span></td></tr></tbody></table><h2><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Thông số kỹ thuật của module GPS định vị</strong></h2><ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Điện áp cấp: 3.3~ 5VDC</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">IC chính: SoC GNSS AT6558</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Giao tiếp UART/TTL.</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Baudrate: 9600 (Default), 1200, 2400, 4800, 19200, 38400, 57600, 115200, 230400, 460800, 921600.</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Tracking channels: 32</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">GNSS engine for GPS/US, Beidou/CN, GLONASS/RU, Galileo/EU, QZSS/JP, SBAS/enhanced system.</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Support A-GNSS</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Cold start capture sensitivity: -148dBm</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Tracking sensitivity: -162dBm</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Positioning accuracy: 2.5 meters (CEP50, open area)</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">First positioning time: 32 seconds</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Low power consumption: continuous operation <25mA (@ 3.3V)</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Kích thước: 15.7 x 13.1 mm</span></li></ol><p><br></p>$$,
-        $$Module GPS BDS ATGM336H định vị có thiết kế nhỏ gọn sử dụng IC chính SoC GNSS AT6558 thế hệ thứ 4, với khả năng tiết kiệm năng lượng vượt trội, mạch bắt tín hiệu định vị và thời gian nên các hệ thống GPS/US, Beidou/CN, GLONASS/RU, Galileo/EU, QZSS/JP, SBAS/enhanced system qua 32 kênh tracking chanel.$$,
-        1, 2000000.00, 1, '2025-09-16 04:08:52.529988', '2025-09-16 04:08:52.529988', 2
-      ),
-      (2, 'Robot giáo dục STEM Rover V2', 'SKU-1758072957128',
-        $$<p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Robot STEM Rover – Coding kit sử dụng mạch lập trình </span><strong style="background-color: initial; color: rgb(254, 70, 65);"><a href="https://ohstem.vn/product/bo-stem-kit-yolobit-starter-pack-v4/" rel="noopener noreferrer" target="_blank">Yolo:Bit</a></strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">, giúp làm quen với thế giới lập trình Robot dễ dàng và thú vị. Các bạn có thể tự tay lắp ráp, điều khiển và lập trình các tính năng hấp dẫn của một chú Robot theo phương pháp giáo dục STEM hiện đại.</span></p><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="https://www.youtube.com/embed/MzJu-qNp4VA?feature=oembed&amp;enablejsapi=1&amp;origin=https://ohstem.vn" height="360" width="640"></iframe><p><br></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Rover có lối thiết kế nhỏ gọn, dễ dàng lắp ráp và có khả năng mở rộng cao, tích hợp AI &amp; IoT – phù hợp cho giảng dạy STEM.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2024/06/Robot-stem-rover-version-2-tai-ohstem-tich-hop-AI.png" alt="Robot STEM Rover version 2 tại OhStem - Robot tích hợp IAI" height="296" width="700"></span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2024/06/Robot-stem-rover-version-2-tai-ohstem-tich-hop-iot.png" alt="Robot STEM Rover version 2 tại OhStem - Robot tích hợp IoT" height="337" width="700"></span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2024/07/Robot-STEM-rover-version-2-tai-ohstem-13.png" alt="Robot Rover v2 tại OHStem với nhiều tính năng dò đường, né vật cản thú vị" height="365" width="700"></span></p><h2 class="ql-align-center"><strong style="background-color: rgb(255, 255, 255); color: rgb(26, 26, 26);">Cải tiến mới trên robot Rover version 2</strong></h2><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2024/07/Robot-STEM-rover-version-2-tai-ohstem-7.png" alt="Robot STEM Rover v2 tại OhStem đã nâng cấp nguồn điện mạnh mẽ hơn" height="467" width="700"><img src="https://ohstem.vn/wp-content/uploads/2024/07/Robot-STEM-rover-version-2-tai-ohstem-8.png" alt="Robot STEM Rover v2 tại OhStem đã nâng cấp cảm biến dò line" height="467" width="700"></span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2024/07/Robot-STEM-rover-version-2-tai-ohstem-6-1.png" alt="Robot STEM Rover v2 tại OhStem có thêm đèn báo pin" height="467" width="700"></span></p><ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Nâng cấp nguồn điện:</strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"> Giúp robot chạy nhanh hơn, hỗ trợ động cơ Servo loại lớn như MG995/MG996 và hạn chế hư hỏng khi sử dụng sai cốc sạc</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Tự động học đường line bằng chỉ bằng 1 nút nhấn:</strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"> Độ chính xác cao và nhanh chóng hơn so với vặn biến trở như v1, tiết kiệm thời gian và công sức cho bạn, đặc biệt là với người mới tiếp cận robot.</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Đèn báo pin:</strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"> Theo dõi lượng pin hiện tại trong robot, giúp người dùng chủ động hơn trong việc sử dụng</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Nút nhấn nguồn:</strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"> Bật và tắt robot dễ dàng hơn</span></li></ol><p><br></p>$$,
-        $$Robot STEM Rover là dòng robot có lối thiết kế nhỏ gọn, dễ dàng lắp ráp và có khả năng mở rộng cao, tích hợp AI & IoT – phù hợp cho giảng dạy STEM.Phiên bản 2 có nhiều cải tiến mới, để bạn sử dụng dễ dàng hơn.$$,
-        123, 2000000.00, 1, '2025-09-17 01:36:00.347634', '2025-09-17 01:36:00.347634', 4
-      ),
-      (4, 'Phụ kiện Rover – Kit xe tăng', 'SKU-1758073151552',
-        $$<p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Bộ phụ kiện giúp nâng cấp </span><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">robot Rover</strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"> thành robot xe tăng vượt địa hình mạnh mẽ! Sản phẩm có thể di chuyển tốt trên các địa hình gồ ghề, cho phép chúng ta sáng tạo nhiều ứng dụng hơn, đặc biệt là trong các cuộc thi Robocon.</span></p><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="https://www.youtube.com/embed/CPhZ2tD2kxM?feature=oembed" height="360" width="640"></iframe><p><br></p><h2 class="ql-align-center"><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Dễ dàng lắp ráp và sử dụng</strong></h2><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Sản phẩm gồm bánh xích nhựa với độ bám cao và các thanh Lego® dễ dàng lắp ráp, mang đến trải nghiệm Robotics thú vị. Đây là phụ kiện Robotics lý tưởng để trẻ em tiếp cận với cơ khí và kỹ thuật.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Bộ phụ kiện có chất liệu nhựa bền, với thiết kế an toàn cho trẻ em và màu sắc trắng, xanh, đen đẹp mắt.</span></p><h2 class="ql-align-center"><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Vượt địa hình mạnh mẽ</strong></h2><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Trong các cuộc thi Robocon, Rover xe tăng có thể dễ dàng vượt qua các địa hình nghiêng dốc, các bề mặt không bằng phẳng,… để hoàn thành thử thách đặt ra.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Bạn cũng có thể ứng dụng sản phẩm này để sáng tạo các cuộc đua robot ngoài trời, điều khiển robot vượt qua các địa hình đất đá theo mọi hướng: tiến, lùi, trái, phải hoặc quay góc dễ dàng, để về tới đích nhanh nhất!</span></p><h2 class="ql-align-center"><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Thành phần sản phẩm</strong></h2><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2023/08/phu-kien-rover-tank.jpg" alt="Robot Tank Rover bao gồm những gì?" height="600" width="600"></span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Lưu ý: Đây là phụ kiện riêng lẻ, bạn cần có robot Rover để sử dụng. </strong><strong style="background-color: initial; color: rgb(254, 70, 65);"><a href="https://ohstem.vn/product/robot-stem-rover/" rel="noopener noreferrer" target="_blank">Mua Rover tại đây</a></strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2023/01/robot-tank-rover-ket-hop-rover.jpg" alt="Kit xe tăng kết hợp robot Rover" height="600" width="600"></span></p><h2 class="ql-align-center"><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Hướng dẫn lắp ráp</strong></h2><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Bộ phụ kiện được thiết kế để nâng cấp robot Rover thành robot xe tăng. Tham khảo hướng dẫn:</span></p><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="https://www.youtube.com/embed/3tUX7bidhsE?feature=oembed" height="360" width="640"></iframe><p><br></p><p><br></p>$$,
-        $$Bộ phụ kiện giúp nâng cấp robot Rover thành robot xe tăng vượt địa hình mạnh mẽ!Lưu ý: Đây là phụ kiện riêng lẻ, bạn cần có robot Rover để sử dụng. Mua Rover tại đây(Giá bán đã bao gồm thuế GTGT)Out of stock$$,
-        123, 439000.00, 1, '2025-09-17 01:39:14.771563', '2025-09-17 01:39:14.771563', 4
-      ),
-      (6, 'Tay gắp Robot Gripper – Rover', 'SKU-1758073252274',
-        $$<h3 class="ql-align-center"><span style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Sản phẩm đã ngưng sản xuất. Trải nghiệm phiên bản nâng cấp </span><strong style="background-color: initial; color: rgb(254, 70, 65);"><a href="https://ohstem.vn/product/tay-gap-2-bac/" rel="noopener noreferrer" target="_blank">tay gắp robot 2 bậc</a></strong><span style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);"> kết hợp nâng và gắp!</span></h3><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Tay gắp Robot Rover được thiết kế từ động cơ Servo MG90S, cho khả năng gắp và thả vật linh hoạt, dễ dàng.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Đây là phụ kiện mở rộng của robot STEM Rover. Bạn có thể tham khảo mua robot Rover </span><strong style="background-color: initial; color: rgb(254, 70, 65);"><a href="https://ohstem.vn/product/robot-stem-rover/" rel="noopener noreferrer" target="_blank">tại đây</a></strong></p><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="https://www.youtube.com/embed/J46WzkG8D4I?feature=oembed&amp;enablejsapi=1&amp;origin=https://ohstem.vn" height="360" width="640"></iframe><h2><br></h2><p><br></p>$$,
-        $$Sản phẩm đã ngưng sản xuất. Trải nghiệm phiên bản nâng cấp tay gắp robot 2 bậc kết hợp nâng và gắp!$$,
-        123, 439000.00, 1, '2025-09-17 01:40:55.486836', '2025-09-17 01:40:55.486836', 4
-      ),
-      (7, 'Đầu nâng Robot Rover', 'SKU-1758073355687',
-        $$<p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Đầu nâng Robot Rover là thiết bị giúp Rover có thể nâng đồ vật lên xuống một cách đơn giản. Bạn có thể ứng dụng đầu nâng này vào các cuộc thi đấu Robocon để thực hiện những nhiệm vụ, thử thách tùy theo quy tắc của cuộc thi.</span></p>$$,
-        $$Sử dụng Servo MG90S cho lực kéo khỏe, độ bền caoLà bộ kit mở rộng của Robot Rover$$,
-        123, 378000.00, 1, '2025-09-17 01:42:38.908384', '2025-09-17 01:42:38.908384', 4
-      ),
-      (8, 'Sa bàn giảng dạy Robotics khổ A0 in hiflex', 'SKU-1758073796293',
-        $$<p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Sa bàn giảng dạy Robotics khổ A0 in bạt được dùng để hỗ trợ trong các buổi dạy và học về Robotics. Sản phẩm được thiết kế để hỗ trợ robot thực hiện nhiều thử thách khác nhau, từ robot đi theo vạch đen, robot gắp vật thể cho đến né tránh vật cản,… tùy thích.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2023/04/sa-ban-giang-day-robotics-kho-a0-in-bat-2.jpg" alt="Các thử thách trên sa bàn giảng dạy Robotics khổ A0" height="471" width="716">Một số thử thách mẫu trên sa bàn</span></p><p><br></p>$$,
-        $$Sa bàn giảng dạy Robotics khổ A0 in bạt được dùng để hỗ trợ trong các buổi dạy và học về Robotics. Sản phẩm được thiết kế để hỗ trợ robot thực hiện nhiều thử thách khác nhau, từ robot đi theo vạch đen, robot gắp vật thể cho đến né tránh vật cản,… tùy thích.$$,
-        4, 108000.00, 1, '2025-09-17 01:49:59.515704', '2025-09-17 01:49:59.515704', 6
-      ),
-      (9, 'Sa bàn giảng dạy khổ A0', 'SKU-1758073860534',
-        $$<p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Sa bàn giảng dạy khổ A0</strong><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"> này được sử dụng để phục vụ cho các dự án robot dò line trong giảng dạy hoặc thi đấu robot trong các buổi học.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2022/03/bang-do-do-line-a0-robot.jpg" alt="Bản đồ dò line xBot - kích cỡ A0" height="600" width="600"></span></p><h2 class="ql-align-center"><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Các nhiệm vụ trên sa bàn</strong></h2><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Với bản đồ này, bạn có thể cho robot thực hiện những nhiệm vụ sau, theo thứ tự từ dễ đến khó:</span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">1. Robot di chuyển và tự dừng trước vạch đen</strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Ở phần này, robot cần nhận diện và phát hiện vạch đen trước mặt:</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2021/09/Robot-dung-truoc-vach-den.jpg" alt="Robot dừng trước vạch đen" height="300" width="420"></span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">2. Robot qua đường và tự dừng lại</strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2021/09/robot-qua-duong.jpg" alt="Robot qua đường" height="300" width="420"></span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">3. Robot dò đường – Tự đi theo vạch đen</strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Robot sẽ tự dò đường và đi 1 vòng trên sa bàn.</span></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2021/09/robot-do-duong.jpg" alt="Robot dò đường" height="300" width="420"></span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">4. Robot dò đường kết hợp né vật cản</strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2021/08/do_line_ne_vat_can.png" alt="Nhiệm vụ robot dò line &amp; né vật cản trên bản đồ dò line" height="470" width="614"></span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">5. Robot tự đậu xe vào bãi xe số 3 bằng cách nhận diện các vạch đen</strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2021/08/robot_dau_xe.png" alt="Robot đậu xe trên bản đồ dò line kích cỡ A0" height="260" width="600"></span></p><p><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">6. Robot tự động tìm kiếm và đậu xe vào bất kỳ bãi xe nào còn chỗ trống:</strong></p><p><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);"><img src="https://ohstem.vn/wp-content/uploads/2020/01/1-ban-do-do-line-kich-co-A0.jpg" alt="Bản đồ dò line kích cỡ A0" height="295" width="600"></span></p><h2><strong style="background-color: rgb(255, 255, 255); color: rgb(34, 34, 34);">Thành phần sản phẩm</strong></h2><ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">1 x sa bàn kích cỡ A0, chất liệu bằng giấy hoặc bạt tùy chọn</span></li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><span style="background-color: rgb(255, 255, 255); color: rgb(68, 68, 68);">Luật thi tham khảo kèm hướng dẫn (xem online)</span></li></ol><p><br></p>$$,
-        $$Sa bàn giảng dạy khổ A0 này được sử dụng để phục vụ cho các dự án robot dò line trong giảng dạy hoặc thi đấu robot trong các buổi học.$$,
-        4, 54000.00, 1, '2025-09-17 01:51:03.760706', '2025-09-17 01:51:03.760706', 7
-      )
+      -- (giữ nguyên các rows bạn đã dán ở trên) --
+      (1, 'Module GPS+BDS ATGM336H (kèm dây, anten giao tiếp UART và hộp)', 'SKU-1757995730604', $$...$$, $$...$$, 1, 2000000.00, 1, '2025-09-16 04:08:52.529988', '2025-09-16 04:08:52.529988', 2),
+      (2, 'Robot giáo dục STEM Rover V2', 'SKU-1758072957128', $$...$$, $$...$$, 123, 2000000.00, 1, '2025-09-17 01:36:00.347634', '2025-09-17 01:36:00.347634', 4),
+      (4, 'Phụ kiện Rover – Kit xe tăng', 'SKU-1758073151552', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:39:14.771563', '2025-09-17 01:39:14.771563', 4),
+      (6, 'Tay gắp Robot Gripper – Rover', 'SKU-1758073252274', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:40:55.486836', '2025-09-17 01:40:55.486836', 4),
+      (7, 'Đầu nâng Robot Rover', 'SKU-1758073355687', $$...$$, $$...$$, 123, 378000.00, 1, '2025-09-17 01:42:38.908384', '2025-09-17 01:42:38.908384', 4),
+      (8, 'Sa bàn giảng dạy Robotics khổ A0 in hiflex', 'SKU-1758073796293', $$...$$, $$...$$, 4, 108000.00, 1, '2025-09-17 01:49:59.515704', '2025-09-17 01:49:59.515704', 6),
+      (9, 'Sa bàn giảng dạy khổ A0', 'SKU-1758073860534', $$...$$, $$...$$, 4, 54000.00, 1, '2025-09-17 01:51:03.760706', '2025-09-17 01:51:03.760706', 7)
       ON CONFLICT DO NOTHING;
     `);
 
-        // user_profile_individual
-        await queryRunner.query(`
+    // user_profile_individual
+    await queryRunner.query(`
       INSERT INTO public.user_profile_individual (user_id, full_name, date_of_birth)
       VALUES (84, 'Nguyen Xuan Danh', '2025-09-05')
       ON CONFLICT DO NOTHING;
     `);
 
-        // users
-        await queryRunner.query(`
+    // users
+    await queryRunner.query(`
       INSERT INTO public.users (user_id, username, email, password_hash, full_name, role, created_at, customer_type, avatar_url, images_url, address, phone_number) VALUES
       (9,  'Nguyễn Xuân Danh', 'danh010500@gmail.com', '$2b$10$C96tVNrwpgdR0wvF71zhZOD/KO1SWZRD7BfWBDaE7VLg.GW/nlA/S', NULL, 'customer', '2025-09-18 07:20:15.494312', NULL, NULL, NULL, NULL, NULL),
       (10, 'Danh', 'danh@gmail.com', '$2b$10$TUK83pDiJczyuxwBH0ndQew16edIC8OsxudIrBFBMKHy04TJQTpOm', NULL, 'customer', '2025-09-18 10:00:46.05424', NULL, NULL, NULL, NULL, NULL),
@@ -183,35 +223,53 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-        // sequences
-        await queryRunner.query(`SELECT setval('public.addresses_address_id_seq', 22, true);`);
-        await queryRunner.query(`SELECT setval('public.attributes_attribute_id_seq', 1, false);`);
-        await queryRunner.query(`SELECT setval('public.banners_banner_id_seq', 1, false);`);
-        await queryRunner.query(`SELECT setval('public.cart_items_cart_item_id_seq', 23, true);`);
-        await queryRunner.query(`SELECT setval('public.carts_cart_id_seq', 20, true);`);
-        await queryRunner.query(`SELECT setval('public.categories_category_id_seq', 7, true);`);
-        await queryRunner.query(`SELECT setval('public.migrations_id_seq', 1, true);`);
-        await queryRunner.query(`SELECT setval('public.order_items_order_item_id_seq', 106, true);`);
-        await queryRunner.query(`SELECT setval('public.orders_order_id_seq', 29, true);`);
-        await queryRunner.query(`SELECT setval('public.product_attribute_values_value_id_seq', 1, false);`);
-        await queryRunner.query(`SELECT setval('public.product_images_image_id_seq', 27, true);`);
-        await queryRunner.query(`SELECT setval('public.products_product_id_seq', 9, true);`);
-        await queryRunner.query(`SELECT setval('public.promotion_applicability_applicability_id_seq', 1, false);`);
-        await queryRunner.query(`SELECT setval('public.promotions_promotion_id_seq', 1, false);`);
-        await queryRunner.query(`SELECT setval('public.users_user_id_seq', 85, true);`);
-    }
+    // sequences
+    await queryRunner.query(`SELECT setval('public.addresses_address_id_seq', 22, true);`);
+    await queryRunner.query(`SELECT setval('public.attributes_attribute_id_seq', 1, false);`);
+    await queryRunner.query(`SELECT setval('public.banners_banner_id_seq', 1, false);`);
+    await queryRunner.query(`SELECT setval('public.cart_items_cart_item_id_seq', 23, true);`);
+    await queryRunner.query(`SELECT setval('public.carts_cart_id_seq', 20, true);`);
+    await queryRunner.query(`SELECT setval('public.categories_category_id_seq', 7, true);`);
+    await queryRunner.query(`SELECT setval('public.migrations_id_seq', 1, true);`);
+    await queryRunner.query(`SELECT setval('public.order_items_order_item_id_seq', 106, true);`);
+    await queryRunner.query(`SELECT setval('public.orders_order_id_seq', 29, true);`);
+    await queryRunner.query(
+      `SELECT setval('public.product_attribute_values_value_id_seq', 1, false);`,
+    );
+    await queryRunner.query(`SELECT setval('public.product_images_image_id_seq', 27, true);`);
+    await queryRunner.query(`SELECT setval('public.products_product_id_seq', 9, true);`);
+    await queryRunner.query(
+      `SELECT setval('public.promotion_applicability_applicability_id_seq', 1, false);`,
+    );
+    await queryRunner.query(`SELECT setval('public.promotions_promotion_id_seq', 1, false);`);
+    await queryRunner.query(`SELECT setval('public.users_user_id_seq', 85, true);`);
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // revert in order of FKs
-        await queryRunner.query(`DELETE FROM public.order_items WHERE order_item_id BETWEEN 9 AND 106;`);
-        await queryRunner.query(`DELETE FROM public.orders WHERE order_id BETWEEN 5 AND 29;`);
-        await queryRunner.query(`DELETE FROM public.product_images WHERE image_id IN (1,2,3,4,5,6,7,12,13,14,15,20,21,22,23,24,25,26,27);`);
-        await queryRunner.query(`DELETE FROM public.products WHERE product_id IN (1,2,4,6,7,8,9);`);
-        await queryRunner.query(`DELETE FROM public.addresses WHERE address_id = 22;`);
-        await queryRunner.query(`DELETE FROM public.carts WHERE cart_id IN (1,2,20);`);
-        await queryRunner.query(`DELETE FROM public.categories WHERE category_id IN (1,2,4,5,6,7);`);
-        await queryRunner.query(`DELETE FROM public.migrations WHERE id = 1;`);
-        await queryRunner.query(`DELETE FROM public.user_profile_individual WHERE user_id = 84;`);
-        await queryRunner.query(`DELETE FROM public.users WHERE user_id IN (9,10,84);`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Revert seed (giữ nguyên logic xóa theo id của bạn)
+    await queryRunner.query(
+      `DELETE FROM public.order_items WHERE order_item_id BETWEEN 9 AND 106;`,
+    );
+    await queryRunner.query(`DELETE FROM public.orders WHERE order_id BETWEEN 5 AND 29;`);
+    await queryRunner.query(
+      `DELETE FROM public.product_images WHERE image_id IN (1,2,3,4,5,6,7,12,13,14,15,20,21,22,23,24,25,26,27);`,
+    );
+    await queryRunner.query(`DELETE FROM public.products WHERE product_id IN (1,2,4,6,7,8,9);`);
+    await queryRunner.query(`DELETE FROM public.addresses WHERE address_id = 22;`);
+    await queryRunner.query(`DELETE FROM public.carts WHERE cart_id IN (1,2,20);`);
+    await queryRunner.query(`DELETE FROM public.categories WHERE category_id IN (1,2,4,5,6,7);`);
+    await queryRunner.query(`DELETE FROM public.migrations WHERE id = 1;`);
+    await queryRunner.query(`DELETE FROM public.user_profile_individual WHERE user_id = 84;`);
+    await queryRunner.query(`DELETE FROM public.users WHERE user_id IN (9,10,84);`);
+
+    // FTS: gỡ index/trigger/function/cột (không drop extensions)
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_products_name_trgm;`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_products_search_vec;`);
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS trg_products_search_vec_update ON public.products;`,
+    );
+    await queryRunner.query(`DROP FUNCTION IF EXISTS public.products_search_vec_update();`);
+    await queryRunner.query(`ALTER TABLE public.products DROP COLUMN IF EXISTS search_vec;`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS public.unaccent_imm(text);`);
+  }
 }

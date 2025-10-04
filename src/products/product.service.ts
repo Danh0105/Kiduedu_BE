@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductImage } from './entities/product-image.entity';
@@ -17,6 +17,7 @@ export class ProductService {
 
     @InjectRepository(Category)
     private readonly categoryRepo: Repository<Category>, // ✅ thêm decorator
+    private readonly ds: DataSource
   ) { }
 
 
@@ -88,5 +89,61 @@ export class ProductService {
       take: limit,
     });
   }
+  async searchProducts(q: string, page = 1, limit = 10) {
+    const term = (q ?? '').trim();
+    if (!term) {
+      return { items: [], pagination: { page, limit, total: 0, pages: 0 } };
+    }
+    const offset = (page - 1) * limit;
 
+    // ITEMS
+    const items = await this.ds.query(
+      `
+      WITH q AS (
+        SELECT public.unaccent_imm($1) AS uq,
+               websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
+      )
+      SELECT
+        p.product_id,
+        p.product_name,
+        ts_rank_cd(p.search_vec, q.tsq, 32) AS rank,
+        img.image_url AS image_url
+      FROM public.products p
+      CROSS JOIN q
+      LEFT JOIN LATERAL (
+        SELECT pi.image_url
+        FROM public.product_images pi
+        WHERE pi.product_id = p.product_id
+        ORDER BY pi.is_primary DESC, pi.image_id ASC
+        LIMIT 1
+      ) AS img ON TRUE
+      WHERE (p.search_vec @@ q.tsq)
+         OR public.unaccent_imm(p.product_name) ILIKE '%' || q.uq || '%'
+      ORDER BY rank DESC, p.product_id
+      LIMIT $2 OFFSET $3
+      `,
+      [term, limit, offset],
+    );
+
+    // TOTAL
+    const totalRes = await this.ds.query(
+      `
+      WITH q AS (
+        SELECT public.unaccent_imm($1) AS uq,
+               websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
+      )
+      SELECT COUNT(*)::int AS count
+      FROM public.products p, q
+      WHERE (p.search_vec @@ q.tsq)
+         OR public.unaccent_imm(p.product_name) ILIKE '%' || q.uq || '%'
+      `,
+      [term],
+    );
+    const total: number = totalRes?.[0]?.count ?? 0;
+
+    return {
+      items,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+  }
 }

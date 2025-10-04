@@ -9,10 +9,12 @@ export class AuthController {
   @Public()
   @Post('login')
   async login(@Body() body: LoginDto) {
+    console.log(body);
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid username or password');
     }
+
     return this.authService.login(user);
   }
   @Public()

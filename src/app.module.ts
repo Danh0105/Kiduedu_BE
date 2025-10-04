@@ -9,6 +9,10 @@ import { OrdersModule } from './orders/order.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { CartModule } from './cart/cart.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { ConfigModule } from '@nestjs/config';
+import { OpenaiModule } from './gpt/openai.module';
+import { MomoModule } from './momo/momo.module';
+import { SearchModule } from './search/search.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -29,9 +33,14 @@ import { StatisticsModule } from './statistics/statistics.module';
     PromotionsModule,
     CartModule,
     StatisticsModule,
+    OpenaiModule,
+    MomoModule,
+    SearchModule,
+    ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [AppController],
   providers: [AppService],
+
 })
 export class AppModule { }
 
