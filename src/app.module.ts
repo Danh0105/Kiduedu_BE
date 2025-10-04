@@ -17,17 +17,7 @@ import { SearchController } from './search/search.controller';
 import { SearchService } from './search/search.service';
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: '163.223.211.23',
-      port: 5432,
-      username: 'admin',
-      password: 'secret',
-      database: 'mydb',
-      autoLoadEntities: true,
-      synchronize: true,
-      migrations: ['dist/migrations/*.js'],
-    }),
+    TypeOrmModule.forRoot({ /* ... */ }),
     AuthModule,
     ProductModule,
     CategoriesModule,
@@ -37,12 +27,11 @@ import { SearchService } from './search/search.service';
     StatisticsModule,
     OpenaiModule,
     MomoModule,
-    SearchModule,
+    SearchModule,                 // <-- chỉ cần import module
     ConfigModule.forRoot({ isGlobal: true }),
   ],
-  controllers: [AppController, SearchController],
-  providers: [AppService, SearchService],
-
+  controllers: [AppController],   // <-- bỏ SearchController ở đây
+  providers: [AppService],      // <-- bỏ SearchService ở đây
 })
 export class AppModule { }
 
