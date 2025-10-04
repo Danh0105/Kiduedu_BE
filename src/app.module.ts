@@ -13,11 +13,19 @@ import { ConfigModule } from '@nestjs/config';
 import { OpenaiModule } from './gpt/openai.module';
 import { MomoModule } from './momo/momo.module';
 import { SearchModule } from './search/search.module';
-import { SearchController } from './search/search.controller';
-import { SearchService } from './search/search.service';
 @Module({
   imports: [
-    TypeOrmModule.forRoot({ /* ... */ }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: '163.223.211.23',
+      port: 5432,
+      username: 'admin',
+      password: 'secret',
+      database: 'mydb',
+      autoLoadEntities: true,
+      synchronize: true,
+      migrations: ['dist/migrations/*.js'],
+    }),
     AuthModule,
     ProductModule,
     CategoriesModule,
@@ -27,11 +35,12 @@ import { SearchService } from './search/search.service';
     StatisticsModule,
     OpenaiModule,
     MomoModule,
-    SearchModule,                 // <-- chỉ cần import module
+    SearchModule,
     ConfigModule.forRoot({ isGlobal: true }),
   ],
-  controllers: [AppController],   // <-- bỏ SearchController ở đây
-  providers: [AppService],      // <-- bỏ SearchService ở đây
+  controllers: [AppController],
+  providers: [AppService],
+
 })
 export class AppModule { }
 
