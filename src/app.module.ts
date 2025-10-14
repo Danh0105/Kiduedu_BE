@@ -36,7 +36,10 @@ import { SearchModule } from './search/search.module';
     /*  OpenaiModule, */
     MomoModule,
     SearchModule,
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env'], // đảm bảo .env nằm cùng thư mục khi pm2 start
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
