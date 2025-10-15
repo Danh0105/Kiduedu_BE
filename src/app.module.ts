@@ -13,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
 /* import { OpenaiModule } from './gpt/openai.module';
  */import { MomoModule } from './momo/momo.module';
 import { SearchModule } from './search/search.module';
+import { BannerModule } from './banners/banner.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -33,6 +34,7 @@ import { SearchModule } from './search/search.module';
     PromotionsModule,
     CartModule,
     StatisticsModule,
+    BannerModule,
     /*  OpenaiModule, */
     MomoModule,
     SearchModule,

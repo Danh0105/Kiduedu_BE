@@ -69,6 +69,14 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
     `);
 
     // ===================== SEED DỮ LIỆU (giữ nguyên của bạn) =====================
+        // users
+    await queryRunner.query(`
+      INSERT INTO public.users (user_id, username, email, password_hash, full_name, role, created_at, customer_type, avatar_url, images_url, address, phone_number) VALUES
+      (9,  'Nguyễn Xuân Danh', 'danh010500@gmail.com', '$2b$10$C96tVNrwpgdR0wvF71zhZOD/KO1SWZRD7BfWBDaE7VLg.GW/nlA/S', NULL, 'customer', '2025-09-18 07:20:15.494312', NULL, NULL, NULL, NULL, NULL),
+      (10, 'Danh', 'danh@gmail.com', '$2b$10$TUK83pDiJczyuxwBH0ndQew16edIC8OsxudIrBFBMKHy04TJQTpOm', NULL, 'customer', '2025-09-18 10:00:46.05424', NULL, NULL, NULL, NULL, NULL),
+      (84, 'danh0105001', 'danh0105010@gmail.com', NULL, NULL, 'customer', '2025-09-26 03:35:27.89795', 'individual', NULL, NULL, NULL, NULL)
+      ON CONFLICT DO NOTHING;
+    `);
     // addresses
     await queryRunner.query(`
       INSERT INTO public.addresses (address_id, full_name, phone_number, street, ward, district, city, is_default, "userUserId")
@@ -103,6 +111,21 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       VALUES (1, 1693234567890, 'InitFullEavSchema1693234567890')
       ON CONFLICT DO NOTHING;
     `);
+// products
+    await queryRunner.query(`
+      INSERT INTO public.products
+      (product_id, product_name, sku, long_description, short_description, status, price, stock_quantity, created_at, updated_at, category_id)
+      VALUES
+      -- (giữ nguyên các rows bạn đã dán ở trên) --
+      (1, 'Module GPS+BDS ATGM336H (kèm dây, anten giao tiếp UART và hộp)', 'SKU-1757995730604', $$...$$, $$...$$, 1, 2000000.00, 1, '2025-09-16 04:08:52.529988', '2025-09-16 04:08:52.529988', 2),
+      (2, 'Robot giáo dục STEM Rover V2', 'SKU-1758072957128', $$...$$, $$...$$, 123, 2000000.00, 1, '2025-09-17 01:36:00.347634', '2025-09-17 01:36:00.347634', 4),
+      (4, 'Phụ kiện Rover – Kit xe tăng', 'SKU-1758073151552', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:39:14.771563', '2025-09-17 01:39:14.771563', 4),
+      (6, 'Tay gắp Robot Gripper – Rover', 'SKU-1758073252274', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:40:55.486836', '2025-09-17 01:40:55.486836', 4),
+      (7, 'Đầu nâng Robot Rover', 'SKU-1758073355687', $$...$$, $$...$$, 123, 378000.00, 1, '2025-09-17 01:42:38.908384', '2025-09-17 01:42:38.908384', 4),
+      (8, 'Sa bàn giảng dạy Robotics khổ A0 in hiflex', 'SKU-1758073796293', $$...$$, $$...$$, 4, 108000.00, 1, '2025-09-17 01:49:59.515704', '2025-09-17 01:49:59.515704', 6),
+      (9, 'Sa bàn giảng dạy khổ A0', 'SKU-1758073860534', $$...$$, $$...$$, 4, 54000.00, 1, '2025-09-17 01:51:03.760706', '2025-09-17 01:51:03.760706', 7)
+      ON CONFLICT DO NOTHING;
+    `);
 
     // orders
     await queryRunner.query(`
@@ -135,7 +158,42 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-    // order_items
+   
+    // product_images
+    await queryRunner.query(`
+      INSERT INTO public.product_images (image_id, image_url, alt_text, is_primary, product_id) VALUES
+      (1,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995711/dudhjbk1sq1orgm8cynh.png',NULL,false,1),
+      (2,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995718/iuhp40d6sfwqxz3cfhxk.png',NULL,false,1),
+      (3,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995731/stfp3cgubrgaxcv9dehk.png',NULL,false,1),
+      (4,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072957/xmrjjkcqhxlefbpbeavy.png',NULL,false,2),
+      (5,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072958/dsfdo84ydb6cmiwn7ekp.png',NULL,false,2),
+      (6,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072959/bc2vgpw76cdeetcn5l5f.png',NULL,false,2),
+      (7,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072959/fvygdmuttnvfxtcriyai.png',NULL,false,2),
+      (12,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073151/ghjmmbyczggkinptlxhq.png',NULL,false,4),
+      (13,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073152/hmoxd2inu6jzmuq2gemy.png',NULL,false,4),
+      (14,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073153/kdumhybjm6ojzcnst7zw.png',NULL,false,4),
+      (15,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073154/epvhr6tn8c2m3igodqfs.png',NULL,false,4),
+      (20,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073253/v2sfcnjtmhczk2kfnka0.jpg',NULL,false,6),
+      (21,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073254/hnwjzkrco664cvlwpfeb.jpg',NULL,false,6),
+      (22,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073352/hquatfltex1ynxnbmh1j.png',NULL,false,7),
+      (23,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073355/ccnfft1haut5pqkhhesi.png',NULL,false,7),
+      (24,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073355/zacwprfyy1g6usta7j17.png',NULL,false,7),
+      (25,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073358/wvgsezjnzwurjqcvomp1.png',NULL,false,7),
+      (26,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073798/qp78nkgbruv2tog5qgrd.jpg',NULL,false,8),
+      (27,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073863/nigmqi5qyctqe1wj2pb7.jpg',NULL,false,9)
+      ON CONFLICT DO NOTHING;
+    `);
+
+    
+    // user_profile_individual
+    await queryRunner.query(`
+      INSERT INTO public.user_profile_individual (user_id, full_name, date_of_birth)
+      VALUES (84, 'Nguyen Xuan Danh', '2025-09-05')
+      ON CONFLICT DO NOTHING;
+    `);
+
+
+ // order_items
     await queryRunner.query(`
       INSERT INTO public.order_items (order_item_id, quantity, price_per_unit, order_id, product_id) VALUES
       (9,1,108000.00,5,8),(10,1,108000.00,5,6),(11,1,108000.00,5,9),(12,1,108000.00,5,7),
@@ -166,68 +224,11 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-    // product_images
-    await queryRunner.query(`
-      INSERT INTO public.product_images (image_id, image_url, alt_text, is_primary, product_id) VALUES
-      (1,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995711/dudhjbk1sq1orgm8cynh.png',NULL,false,1),
-      (2,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995718/iuhp40d6sfwqxz3cfhxk.png',NULL,false,1),
-      (3,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995731/stfp3cgubrgaxcv9dehk.png',NULL,false,1),
-      (4,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072957/xmrjjkcqhxlefbpbeavy.png',NULL,false,2),
-      (5,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072958/dsfdo84ydb6cmiwn7ekp.png',NULL,false,2),
-      (6,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072959/bc2vgpw76cdeetcn5l5f.png',NULL,false,2),
-      (7,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758072959/fvygdmuttnvfxtcriyai.png',NULL,false,2),
-      (12,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073151/ghjmmbyczggkinptlxhq.png',NULL,false,4),
-      (13,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073152/hmoxd2inu6jzmuq2gemy.png',NULL,false,4),
-      (14,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073153/kdumhybjm6ojzcnst7zw.png',NULL,false,4),
-      (15,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073154/epvhr6tn8c2m3igodqfs.png',NULL,false,4),
-      (20,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073253/v2sfcnjtmhczk2kfnka0.jpg',NULL,false,6),
-      (21,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073254/hnwjzkrco664cvlwpfeb.jpg',NULL,false,6),
-      (22,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073352/hquatfltex1ynxnbmh1j.png',NULL,false,7),
-      (23,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073355/ccnfft1haut5pqkhhesi.png',NULL,false,7),
-      (24,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073355/zacwprfyy1g6usta7j17.png',NULL,false,7),
-      (25,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073358/wvgsezjnzwurjqcvomp1.png',NULL,false,7),
-      (26,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073798/qp78nkgbruv2tog5qgrd.jpg',NULL,false,8),
-      (27,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1758073863/nigmqi5qyctqe1wj2pb7.jpg',NULL,false,9)
-      ON CONFLICT DO NOTHING;
-    `);
-
-    // products
-    await queryRunner.query(`
-      INSERT INTO public.products
-      (product_id, product_name, sku, long_description, short_description, status, price, stock_quantity, created_at, updated_at, category_id)
-      VALUES
-      -- (giữ nguyên các rows bạn đã dán ở trên) --
-      (1, 'Module GPS+BDS ATGM336H (kèm dây, anten giao tiếp UART và hộp)', 'SKU-1757995730604', $$...$$, $$...$$, 1, 2000000.00, 1, '2025-09-16 04:08:52.529988', '2025-09-16 04:08:52.529988', 2),
-      (2, 'Robot giáo dục STEM Rover V2', 'SKU-1758072957128', $$...$$, $$...$$, 123, 2000000.00, 1, '2025-09-17 01:36:00.347634', '2025-09-17 01:36:00.347634', 4),
-      (4, 'Phụ kiện Rover – Kit xe tăng', 'SKU-1758073151552', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:39:14.771563', '2025-09-17 01:39:14.771563', 4),
-      (6, 'Tay gắp Robot Gripper – Rover', 'SKU-1758073252274', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:40:55.486836', '2025-09-17 01:40:55.486836', 4),
-      (7, 'Đầu nâng Robot Rover', 'SKU-1758073355687', $$...$$, $$...$$, 123, 378000.00, 1, '2025-09-17 01:42:38.908384', '2025-09-17 01:42:38.908384', 4),
-      (8, 'Sa bàn giảng dạy Robotics khổ A0 in hiflex', 'SKU-1758073796293', $$...$$, $$...$$, 4, 108000.00, 1, '2025-09-17 01:49:59.515704', '2025-09-17 01:49:59.515704', 6),
-      (9, 'Sa bàn giảng dạy khổ A0', 'SKU-1758073860534', $$...$$, $$...$$, 4, 54000.00, 1, '2025-09-17 01:51:03.760706', '2025-09-17 01:51:03.760706', 7)
-      ON CONFLICT DO NOTHING;
-    `);
-
-    // user_profile_individual
-    await queryRunner.query(`
-      INSERT INTO public.user_profile_individual (user_id, full_name, date_of_birth)
-      VALUES (84, 'Nguyen Xuan Danh', '2025-09-05')
-      ON CONFLICT DO NOTHING;
-    `);
-
-    // users
-    await queryRunner.query(`
-      INSERT INTO public.users (user_id, username, email, password_hash, full_name, role, created_at, customer_type, avatar_url, images_url, address, phone_number) VALUES
-      (9,  'Nguyễn Xuân Danh', 'danh010500@gmail.com', '$2b$10$C96tVNrwpgdR0wvF71zhZOD/KO1SWZRD7BfWBDaE7VLg.GW/nlA/S', NULL, 'customer', '2025-09-18 07:20:15.494312', NULL, NULL, NULL, NULL, NULL),
-      (10, 'Danh', 'danh@gmail.com', '$2b$10$TUK83pDiJczyuxwBH0ndQew16edIC8OsxudIrBFBMKHy04TJQTpOm', NULL, 'customer', '2025-09-18 10:00:46.05424', NULL, NULL, NULL, NULL, NULL),
-      (84, 'danh0105001', 'danh0105010@gmail.com', NULL, NULL, 'customer', '2025-09-26 03:35:27.89795', 'individual', NULL, NULL, NULL, NULL)
-      ON CONFLICT DO NOTHING;
-    `);
-
     // sequences
     await queryRunner.query(`SELECT setval('public.addresses_address_id_seq', 22, true);`);
     await queryRunner.query(`SELECT setval('public.attributes_attribute_id_seq', 1, false);`);
-    await queryRunner.query(`SELECT setval('public.banners_banner_id_seq', 1, false);`);
-    await queryRunner.query(`SELECT setval('public.cart_items_cart_item_id_seq', 23, true);`);
+/*     await queryRunner.query(`SELECT setval('public.banners_banner_id_seq', 1, false);`);
+ */    await queryRunner.query(`SELECT setval('public.cart_items_cart_item_id_seq', 23, true);`);
     await queryRunner.query(`SELECT setval('public.carts_cart_id_seq', 20, true);`);
     await queryRunner.query(`SELECT setval('public.categories_category_id_seq', 7, true);`);
     await queryRunner.query(`SELECT setval('public.migrations_id_seq', 1, true);`);
