@@ -6,31 +6,31 @@ import { Promotion } from '../../promotions/entities/promotion.entity';
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn()
-  order_id: number;
+  order_id!: number;
 
   @ManyToOne(() => User, (user) => user.orders, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ type: 'decimal', precision: 15, scale: 2 })
-  subtotal: number;
+  subtotal!: number;
 
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-  discount_amount: number;
+  discount_amount!: number;
 
   @Column({ type: 'decimal', precision: 15, scale: 2 })
-  total_amount: number;
+  total_amount!: number;
 
   @Column({ default: 'Pending' })
-  status: string;
+  status !: string;
 
   @CreateDateColumn()
-  order_date: Date;
+  order_date!: Date;
 
   @ManyToOne(() => Promotion, (promo) => promo.orders, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'promotion_id' })
-  promotion: Promotion;
+  promotion!: Promotion;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
-  items: OrderItem[];
+  items!: OrderItem[];
 }

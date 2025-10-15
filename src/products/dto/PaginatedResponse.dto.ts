@@ -2,31 +2,31 @@ import { Expose } from 'class-transformer';
 
 export class PaginationMetaDto {
   @Expose()
-  total: number;
+  total!: number;
 
   @Expose()
-  page: number;
+  page!: number;
 
   @Expose()
-  limit: number;
+  limit!: number;
 
   @Expose()
-  last_page: number;
+  last_page!: number;
 }
 
 export class PaginatedResponseDto<T> {
   @Expose()
-  success: boolean;
+  success!: boolean;
 
   @Expose()
-  message: string;
+  message!: string;
 
   @Expose()
-  statusCode: number;
+  statusCode!: number;
 
   @Expose()
-  meta: PaginationMetaDto;
+  meta!: PaginationMetaDto;
 
   @Expose()
-  data: T[];
+  data!: T[];
 }

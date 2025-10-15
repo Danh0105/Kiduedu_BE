@@ -5,7 +5,7 @@ import { CreateProductImageDto } from './product-image.dto';
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
-  product_name: string;
+  product_name!: string;
 
   @IsString()
   @IsOptional()
@@ -22,7 +22,7 @@ export class CreateProductDto {
 
   @Type(() => Number)
   @IsNumber()
-  price: number;
+  price!: number;
 
   @Type(() => Number)
   @IsNumber()
@@ -37,5 +37,5 @@ export class CreateProductDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateProductImageDto)
-  images: CreateProductImageDto[];
+  images!: CreateProductImageDto[];
 }

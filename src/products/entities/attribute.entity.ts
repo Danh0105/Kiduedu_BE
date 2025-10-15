@@ -5,17 +5,17 @@ import { ProductAttributeValue } from './product-attribute-value.entity';
 @Entity('attributes')
 export class Attribute {
   @PrimaryGeneratedColumn()
-  attribute_id: number;
+  attribute_id!: number;
 
   @Column({ unique: true, length: 100 })
-  attribute_name: string;
+  attribute_name!: string;
 
   @Column({ length: 20 })
-  value_type: string;
+  value_type!: string;
 
   @OneToMany(() => CategoryAttribute, (ca) => ca.attribute)
-  categoryAttributes: CategoryAttribute[];
+  categoryAttributes!: CategoryAttribute[];
 
   @OneToMany(() => ProductAttributeValue, (pav) => pav.attribute)
-  productAttributeValues: ProductAttributeValue[];
+  productAttributeValues!: ProductAttributeValue[];
 }

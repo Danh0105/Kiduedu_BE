@@ -5,16 +5,16 @@ import { Attribute } from './attribute.entity';
 @Entity('category_attributes')
 export class CategoryAttribute {
   @PrimaryColumn()
-  category_id: number;
+  category_id!: number;
 
   @PrimaryColumn()
-  attribute_id: number;
+  attribute_id!: number;
 
   @ManyToOne(() => Category, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'category_id' })
-  category: Category;
+  category!: Category;
 
   @ManyToOne(() => Attribute, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'attribute_id' })
-  attribute: Attribute;
+  attribute!: Attribute;
 }

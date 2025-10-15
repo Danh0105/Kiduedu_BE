@@ -12,22 +12,22 @@ import { CustomerType } from '../entities/user.entity';
 
 class AddressDto {
   @IsNotEmpty()
-  full_name: string;
+  full_name!: string;
 
   @IsNotEmpty()
-  phone_number: string;
+  phone_number!: string;
 
   @IsNotEmpty()
-  street: string;
+  street!: string;
 
   @IsNotEmpty()
-  ward: string;
+  ward!: string;
 
   @IsNotEmpty()
-  district: string;
+  district!: string;
 
   @IsNotEmpty()
-  city: string;
+  city!: string;
 
   @IsOptional()
   is_default?: boolean;
@@ -35,13 +35,13 @@ class AddressDto {
 
 export class CreateUserDto {
   @IsNotEmpty()
-  username: string;
+  username!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
-  password: string;
+  password!: string;
 
   @IsOptional()
   fullName?: string;
@@ -50,7 +50,7 @@ export class CreateUserDto {
   role?: string;
 
   @IsEnum(CustomerType)
-  customerType: CustomerType;
+  customerType!: CustomerType;
 
   // Thông tin doanh nghiệp (nếu có)
   @IsOptional()
@@ -70,8 +70,8 @@ export class CreateUserDto {
   // Địa chỉ mặc định
   @ValidateNested()
   @Type(() => AddressDto)
-  address: AddressDto;
+  address!: AddressDto;
 
   @IsArray()
-  items: { product_id: number; quantity: number; price_per_unit: number }[];
+  items!: { product_id: number; quantity: number; price_per_unit: number }[];
 }

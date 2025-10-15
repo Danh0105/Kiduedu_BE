@@ -9,31 +9,31 @@ import { User } from '../../users/entities/user.entity';
 @Entity('addresses')
 export class Address {
   @PrimaryGeneratedColumn()
-  address_id: number;
+  address_id!: number;
 
   @ManyToOne(() => User, user => user.addresses, { onDelete: 'CASCADE' })
-  user: User;
+  user!: User;
 
   @Column({ length: 100 })
-  full_name: string;
+  full_name!: string;
 
   @Column({ length: 20 })
-  phone_number: string;
+  phone_number!: string;
 
   @Column({ length: 255 })
-  street: string;
+  street!: string;
 
   @Column({ length: 100 })
-  ward: string;
+  ward!: string;
 
   @Column({ length: 100 })
-  district: string;
+  district!: string;
 
   @Column({ length: 100 })
-  city: string;
+  city!: string;
 
   @Column({ default: false })
-  is_default: boolean;
+  is_default!: boolean;
 
 
 }

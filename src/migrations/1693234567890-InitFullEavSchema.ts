@@ -68,7 +68,112 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
         ON public.products USING GIN ((public.unaccent_imm(product_name)) gin_trgm_ops);
     `);
 
-    // ===================== SEED DỮ LIỆU (giữ nguyên của bạn) =====================
+    /* =========================================================================
+     * =======================  VARIANTS SCHEMA  ===============================
+     * ========================================================================= */
+
+    // 1) Options (thuộc tính tạo biến thể, ví dụ: Loại màn hình / Màu / Size)
+    await queryRunner.query(`
+      CREATE TABLE IF NOT EXISTS public.product_options (
+        option_id     SERIAL PRIMARY KEY,
+        product_id    INTEGER NOT NULL REFERENCES public.products(product_id) ON DELETE CASCADE,
+        option_name   VARCHAR(100) NOT NULL,
+        position      INTEGER NOT NULL DEFAULT 1,
+        UNIQUE (product_id, option_name)
+      );
+    `);
+
+    // 2) Giá trị cho từng option (ví dụ: Thường, OLED)
+    await queryRunner.query(`
+      CREATE TABLE IF NOT EXISTS public.product_option_values (
+        value_id    SERIAL PRIMARY KEY,
+        option_id   INTEGER NOT NULL REFERENCES public.product_options(option_id) ON DELETE CASCADE,
+        value_text  VARCHAR(100) NOT NULL,
+        UNIQUE (option_id, value_text)
+      );
+    `);
+
+    // 3) Bảng biến thể (mỗi row là một loại có giá/tồn kho/sku riêng)
+    await queryRunner.query(`
+      CREATE TABLE IF NOT EXISTS public.product_variants (
+        variant_id        SERIAL PRIMARY KEY,
+        product_id        INTEGER NOT NULL REFERENCES public.products(product_id) ON DELETE CASCADE,
+        sku               VARCHAR(80) UNIQUE,
+        price             NUMERIC(12,2) NOT NULL,
+        compare_at_price  NUMERIC(12,2),
+        stock_quantity    INTEGER NOT NULL DEFAULT 0,
+        status            INTEGER NOT NULL DEFAULT 1,  -- 1=active, 0=hidden
+        created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at        TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_product_variants_product_id
+        ON public.product_variants(product_id);
+      CREATE INDEX IF NOT EXISTS idx_product_variants_status
+        ON public.product_variants(status);
+    `);
+
+    // 4) Mapping biến thể <-> các option values
+    await queryRunner.query(`
+      CREATE TABLE IF NOT EXISTS public.product_variant_values (
+        variant_id  INTEGER NOT NULL REFERENCES public.product_variants(variant_id) ON DELETE CASCADE,
+        option_id   INTEGER NOT NULL REFERENCES public.product_options(option_id) ON DELETE CASCADE,
+        value_id    INTEGER NOT NULL REFERENCES public.product_option_values(value_id) ON DELETE RESTRICT,
+        PRIMARY KEY (variant_id, option_id)
+      );
+
+      -- Không cho phép cùng một sản phẩm có 2 biến thể trùng bộ giá trị
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_variant_values_per_product
+      ON public.product_variant_values(variant_id, option_id, value_id);
+    `);
+
+    // 5) Cập nhật order_items để hỗ trợ variant
+    await queryRunner.query(`
+      ALTER TABLE public.order_items
+      ADD COLUMN IF NOT EXISTS variant_id INTEGER NULL
+        REFERENCES public.product_variants(variant_id) ON DELETE SET NULL;
+
+      -- Trigger: nếu có variant_id mà product_id NULL => tự set product_id theo variant
+      -- và đảm bảo consistency: variant.product_id == order_items.product_id
+      CREATE OR REPLACE FUNCTION public.order_items_variant_sync()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      DECLARE vpid INTEGER;
+      BEGIN
+        IF NEW.variant_id IS NOT NULL THEN
+          SELECT product_id INTO vpid FROM public.product_variants WHERE variant_id = NEW.variant_id;
+          IF NEW.product_id IS NULL THEN
+            NEW.product_id := vpid;
+          ELSIF NEW.product_id IS NOT NULL AND NEW.product_id <> vpid THEN
+            RAISE EXCEPTION 'order_items.product_id (%) must match product_variants.product_id (%) when variant_id is set',
+              NEW.product_id, vpid;
+          END IF;
+        END IF;
+        RETURN NEW;
+      END
+      $$;
+
+      DROP TRIGGER IF EXISTS trg_order_items_variant_sync ON public.order_items;
+      CREATE TRIGGER trg_order_items_variant_sync
+      BEFORE INSERT OR UPDATE ON public.order_items
+      FOR EACH ROW EXECUTE FUNCTION public.order_items_variant_sync();
+    `);
+
+    // 6) View tiện lợi: min/max price theo variants (fallback sang products.price)
+    await queryRunner.query(`
+      CREATE OR REPLACE VIEW public.products_price_range AS
+      SELECT
+        p.product_id,
+        COALESCE(MIN(v.price) FILTER (WHERE v.status = 1), p.price) AS min_price,
+        COALESCE(MAX(v.price) FILTER (WHERE v.status = 1), p.price) AS max_price
+      FROM public.products p
+      LEFT JOIN public.product_variants v
+        ON v.product_id = p.product_id
+      GROUP BY p.product_id;
+    `);
+
+    /* ===================== SEED DỮ LIỆU (giữ nguyên của bạn) ===================== */
     // addresses
     await queryRunner.query(`
       INSERT INTO public.addresses (address_id, full_name, phone_number, street, ward, district, city, is_default, "userUserId")
@@ -135,7 +240,7 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-    // order_items
+    // order_items (giữ seed cũ – cột variant_id là NULL)
     await queryRunner.query(`
       INSERT INTO public.order_items (order_item_id, quantity, price_per_unit, order_id, product_id) VALUES
       (9,1,108000.00,5,8),(10,1,108000.00,5,6),(11,1,108000.00,5,9),(12,1,108000.00,5,7),
@@ -166,7 +271,7 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       ON CONFLICT DO NOTHING;
     `);
 
-    // product_images
+    // product_images (giữ nguyên)
     await queryRunner.query(`
       INSERT INTO public.product_images (image_id, image_url, alt_text, is_primary, product_id) VALUES
       (1,'https://res.cloudinary.com/dlnkeb4dm/image/upload/v1757995711/dudhjbk1sq1orgm8cynh.png',NULL,false,1),
@@ -196,7 +301,6 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
       INSERT INTO public.products
       (product_id, product_name, sku, long_description, short_description, status, price, stock_quantity, created_at, updated_at, category_id)
       VALUES
-      -- (giữ nguyên các rows bạn đã dán ở trên) --
       (1, 'Module GPS+BDS ATGM336H (kèm dây, anten giao tiếp UART và hộp)', 'SKU-1757995730604', $$...$$, $$...$$, 1, 2000000.00, 1, '2025-09-16 04:08:52.529988', '2025-09-16 04:08:52.529988', 2),
       (2, 'Robot giáo dục STEM Rover V2', 'SKU-1758072957128', $$...$$, $$...$$, 123, 2000000.00, 1, '2025-09-17 01:36:00.347634', '2025-09-17 01:36:00.347634', 4),
       (4, 'Phụ kiện Rover – Kit xe tăng', 'SKU-1758073151552', $$...$$, $$...$$, 123, 439000.00, 1, '2025-09-17 01:39:14.771563', '2025-09-17 01:39:14.771563', 4),
@@ -232,7 +336,6 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
     await queryRunner.query(`SELECT setval('public.categories_category_id_seq', 7, true);`);
     await queryRunner.query(`SELECT setval('public.migrations_id_seq', 1, true);`);
     await queryRunner.query(`SELECT setval('public.order_items_order_item_id_seq', 106, true);`);
-    await queryRunner.query(`SELECT setval('public.orders_order_id_seq', 29, true);`);
     await queryRunner.query(
       `SELECT setval('public.product_attribute_values_value_id_seq', 1, false);`,
     );
@@ -261,6 +364,21 @@ export class InitFullEavSchema1693234567890 implements MigrationInterface {
     await queryRunner.query(`DELETE FROM public.migrations WHERE id = 1;`);
     await queryRunner.query(`DELETE FROM public.user_profile_individual WHERE user_id = 84;`);
     await queryRunner.query(`DELETE FROM public.users WHERE user_id IN (9,10,84);`);
+
+    // ---- VARIANTS SCHEMA: drop in reverse order ----
+    await queryRunner.query(`DROP VIEW IF EXISTS public.products_price_range;`);
+    await queryRunner.query(`
+      DROP TRIGGER IF EXISTS trg_order_items_variant_sync ON public.order_items;
+      DROP FUNCTION IF EXISTS public.order_items_variant_sync();
+    `);
+    await queryRunner.query(`
+      ALTER TABLE public.order_items
+      DROP COLUMN IF EXISTS variant_id;
+    `);
+    await queryRunner.query(`DROP TABLE IF EXISTS public.product_variant_values;`);
+    await queryRunner.query(`DROP TABLE IF EXISTS public.product_variants;`);
+    await queryRunner.query(`DROP TABLE IF EXISTS public.product_option_values;`);
+    await queryRunner.query(`DROP TABLE IF EXISTS public.product_options;`);
 
     // FTS: gỡ index/trigger/function/cột (không drop extensions)
     await queryRunner.query(`DROP INDEX IF EXISTS idx_products_name_trgm;`);

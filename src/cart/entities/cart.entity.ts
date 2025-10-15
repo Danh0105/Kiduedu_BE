@@ -5,15 +5,15 @@ import { CartItem } from './cart-item.entity';
 @Entity('carts')
 export class Cart {
   @PrimaryGeneratedColumn()
-  cart_id: number;
+  cart_id!: number;
 
   @OneToOne(() => User, user => user.cart, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @OneToMany(() => CartItem, item => item.cart)
-  items: CartItem[];
+  items!: CartItem[];
 }

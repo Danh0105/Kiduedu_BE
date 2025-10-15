@@ -5,32 +5,32 @@ import { Order } from '../../orders/entities/order.entity';
 @Entity('promotions')
 export class Promotion {
   @PrimaryGeneratedColumn()
-  promotion_id: number;
+  promotion_id!: number;
 
   @Column({ length: 100 })
-  name: string;
+  name!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description!: string;
 
   @Column({ type: 'enum', enum: ['percentage', 'fixed_amount'] })
-  discount_type: 'percentage' | 'fixed_amount';
+  discount_type!: 'percentage' | 'fixed_amount';
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  discount_value: number;
+  discount_value!: number;
 
   @Column({ type: 'timestamptz' })
-  start_date: Date;
+  start_date!: Date;
 
   @Column({ type: 'timestamptz' })
-  end_date: Date;
+  end_date!: Date;
 
   @Column({ default: true })
-  is_active: boolean;
+  is_active!: boolean;
 
   @OneToMany(() => PromotionApplicability, pa => pa.promotion)
-  applicability: PromotionApplicability[];
+  applicability!: PromotionApplicability[];
 
   @OneToMany(() => Order, order => order.promotion)
-  orders: Order[];
+  orders!: Order[];
 }

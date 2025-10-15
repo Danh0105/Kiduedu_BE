@@ -20,31 +20,31 @@ export enum CustomerType {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
-  user_id: number;
+  user_id!: number;
 
   @Column({ unique: true, length: 50 })
-  username: string;
+  username!: string;
 
   @Column({ unique: true, length: 100 })
-  email: string;
+  email!: string;
 
   @Column({ length: 255, nullable: true })
-  password_hash: string;
+  password_hash!: string;
 
   @Column({ length: 100, nullable: true })
-  full_name: string;
+  full_name!: string;
 
   @Column({ length: 20, nullable: true })
-  phone_number: string;
+  phone_number!: string;
 
   @Column({ default: 'customer' })
-  role: string;
+  role!: string;
 
   @Column({ length: 255, nullable: true })
-  images_url: string;
+  images_url!: string;
 
   @Column({ length: 255, nullable: true })
-  address: string;
+  address!: string;
 
   @Column({
     type: 'enum',
@@ -52,31 +52,31 @@ export class User {
     default: CustomerType.INDIVIDUAL,
     nullable: true
   })
-  customer_type: CustomerType;
+  customer_type!: CustomerType;
 
   @Column({ length: 255, nullable: true })
-  avatar_url: string;
+  avatar_url!: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   // Quan hệ với đơn hàng
   @OneToMany(() => Order, order => order.user)
-  orders: Order[];
+  orders!: Order[];
 
   // Quan hệ với giỏ hàng
   @OneToOne(() => Cart, cart => cart.user)
-  cart: Cart;
+  cart!: Cart;
 
   // Quan hệ với danh sách địa chỉ
   @OneToMany(() => Address, address => address.user)
-  addresses: Address[];
+  addresses!: Address[];
 
   // Hồ sơ cá nhân
   @OneToOne(() => UserProfileIndividual, profile => profile.user)
-  profile_individual: UserProfileIndividual;
+  profile_individual!: UserProfileIndividual;
 
   // Hồ sơ doanh nghiệp
   @OneToOne(() => UserProfileBusiness, profile => profile.user)
-  profile_business: UserProfileBusiness;
+  profile_business!: UserProfileBusiness;
 }

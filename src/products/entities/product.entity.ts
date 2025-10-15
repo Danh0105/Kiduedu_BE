@@ -7,45 +7,45 @@ import { OrderItem } from '../../orders/entities/order-item.entity';
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
-  product_id: number;
+  product_id!: number;
 
   @Column({ length: 255 })
-  product_name: string;
+  product_name!: string;
 
   @Column({ length: 50, unique: true })
-  sku: string;
+  sku!: string;
 
   @Column({ type: 'text', nullable: true })
-  long_description: string;
+  long_description!: string;
 
   @Column({ type: 'text', nullable: true })
-  short_description: string;
+  short_description!: string;
 
   @Column({ type: 'int', default: 1 })
-  status: number;
+  status!: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
-  price: number;
+  price!: number;
 
   @Column({ type: 'int', default: 0 })
-  stock_quantity: number;
+  stock_quantity!: number;
 
   @ManyToOne(() => Category, category => category.products, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'category_id' })
-  category: Category;
+  category!: Category;
 
   @CreateDateColumn()
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updated_at!: Date;
 
   @OneToMany(() => ProductImage, image => image.product, { cascade: true })
-  images: ProductImage[];
+  images!: ProductImage[];
 
   @OneToMany(() => ProductAttributeValue, attrValue => attrValue.product)
-  attributeValues: ProductAttributeValue[];
+  attributeValues!: ProductAttributeValue[];
 
   @OneToMany(() => OrderItem, item => item.product)
-  orderItems: OrderItem[];
+  orderItems!: OrderItem[];
 }

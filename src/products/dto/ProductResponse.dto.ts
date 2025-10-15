@@ -2,56 +2,56 @@ import { Expose, Type } from 'class-transformer';
 
 class ImageResponseDto {
   @Expose()
-  image_id: number;
+  image_id!: number;
 
   @Expose()
-  image_url: string;
+  image_url!: string;
 }
 
 class CategoryResponseDto {
   @Expose()
-  category_id: number;
+  category_id!: number;
 
   @Expose()
-  category_name: string;
+  category_name!: string;
 }
 
 export class ProductResponseDto {
   @Expose()
-  product_id: number;
+  product_id!: number;
 
   @Expose()
-  product_name: string;
+  product_name!: string;
 
   @Expose()
-  sku: string;
+  sku!: string;
 
   @Expose()
-  short_description: string;
+  short_description!: string;
 
   @Expose()
-  long_description: string;
+  long_description!: string;
 
   @Expose()
-  status: number;
+  status!: number;
 
   @Expose()
-  price: number;
+  price!: number;
 
   @Expose()
-  stock_quantity: number;
+  stock_quantity!: number;
 
   @Expose()
-  created_at: Date;
+  created_at!: Date;
 
   @Expose()
-  updated_at: Date;
+  updated_at!: Date;
 
   @Expose()
   @Type(() => CategoryResponseDto)
-  category: CategoryResponseDto;
+  category!: CategoryResponseDto;
 
   @Expose()
   @Type(() => ImageResponseDto)
-  images: ImageResponseDto[];
+  images!: ImageResponseDto[];
 }

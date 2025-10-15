@@ -5,16 +5,16 @@ import { Product } from '../../products/entities/product.entity';
 @Entity('cart_items')
 export class CartItem {
   @PrimaryGeneratedColumn()
-  cart_item_id: number;
+  cart_item_id!: number;
 
   @ManyToOne(() => Cart, cart => cart.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'cart_id' })
-  cart: Cart;
+  cart!: Cart;
 
   @ManyToOne(() => Product, product => product, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'product_id' })
-  product: Product;
+  product!: Product;
 
   @Column({ type: 'int' })
-  quantity: number;
+  quantity!: number;
 }
