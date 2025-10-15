@@ -18,11 +18,11 @@ import { BannerModule } from './banners/banner.module';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: '163.223.211.23',
-      port: 5432,
-      username: 'admin',
-      password: 'secret',
-      database: 'mydb',
+      host: process.env.POSTGRES_HOST,
+      port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+      username: process.env.POSTGRES_USER,
+      password: process.env.POSTGRES_PASSWORD,
+      database: process.env.POSTGRES_DB,
       autoLoadEntities: true,
       synchronize: true,
       migrations: ['dist/migrations/*.js'],
