@@ -35,45 +35,30 @@ import { FeedbackModule } from './feedback/feedback.module';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const isProd = cfg.get<'development' | 'production' | 'test'>('NODE_ENV') === 'production';
+        const isProd =
+          cfg.get<'development' | 'production' | 'test'>('NODE_ENV') === 'production';
         return {
           type: 'postgres',
-          host: cfg.get<string>('POSTGRES_HOST'),
-          port: cfg.get<number>('POSTGRES_PORT'),
-          username: cfg.get<string>('POSTGRES_USER'),
-          password: cfg.get<string>('POSTGRES_PASSWORD'),
-          database: cfg.get<string>('POSTGRES_DB'),
+          host: cfg.get<string>('POSTGRES_HOST', '127.0.0.1'),
+          port: Number(cfg.get<string>('POSTGRES_PORT', '5432')),
+          username: cfg.get<string>('POSTGRES_USER', 'postgres'),
+          password: cfg.get<string>('POSTGRES_PASSWORD', 'postgres'),
+          database: cfg.get<string>('POSTGRES_DB', 'nestjs_db'),
 
-          // Giúp HMR/dev không bị đóng connection khi reload
           keepConnectionAlive: true,
-
-          // Pool & timeout: giảm khả năng “terminated unexpectedly” do mạng chập chờn
           extra: {
-            application_name: 'nestjs-local',
-            statement_timeout: 0,            // 0 = no timeout cho câu lệnh
-            idle_in_transaction_session_timeout: 0,
-            // Kết nối qua Internet: nên bật keepalive
-            keepAlive: true,                 // node-postgres TCP keepalive
-            connectionTimeoutMillis: 10000,  // 10s
-            idleTimeoutMillis: 30000,        // 30s
-            max: 10,                         // pool size
+            application_name: 'nestjs-app',
+            keepAlive: true,
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000,
+            max: 10,
           },
-
-          // Bạn chưa bật TLS ở phía Postgres => để false.
-          // Nếu sau này bật TLS, đổi thành: ssl: { rejectUnauthorized: true, ca: fs.readFileSync('ca.pem') }
           ssl: false,
-
-          // Tự load entity khi dev
           autoLoadEntities: true,
           synchronize: !isProd,
-
-          // Tăng khả năng hồi phục khi DB vừa khởi động xong
           retryAttempts: 10,
           retryDelay: 2000,
-
-          // Bật log khi cần debug
-          logging: !isProd ? ['error', 'warn'] : ['error'],
-
+          logging: isProd ? ['error'] : ['error', 'warn'],
           migrations: ['dist/migrations/*.js'],
         };
       },
