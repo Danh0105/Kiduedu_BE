@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
+
 import { SearchModule } from './search/search.module';
 import { MomoModule } from './momo/momo.module';
 import { StatisticsModule } from './statistics/statistics.module';
@@ -16,9 +17,11 @@ import { AppService } from './app.service';
 import { PolicyModule } from './policy/policy.module';
 import { CustomerServiceModule } from './customer-service/customer-service.module';
 import { FeedbackModule } from './feedback/feedback.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
+      isGlobal: true,
       envFilePath: ['.env'],
       validationSchema: Joi.object({
         POSTGRES_HOST: Joi.string().required(),
@@ -26,17 +29,14 @@ import { FeedbackModule } from './feedback/feedback.module';
         POSTGRES_USER: Joi.string().required(),
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DB: Joi.string().required(),
-        NODE_ENV: Joi.string()
-          .valid('development', 'production', 'test')
-          .default('development'),
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
       }),
     }),
 
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const isProd =
-          cfg.get<'development' | 'production' | 'test'>('NODE_ENV') === 'production';
+        const isProd = cfg.get<'development' | 'production' | 'test'>('NODE_ENV') === 'production';
         return {
           type: 'postgres',
           host: cfg.get<string>('POSTGRES_HOST', '127.0.0.1'),
@@ -72,12 +72,10 @@ import { FeedbackModule } from './feedback/feedback.module';
     CartModule,
     StatisticsModule,
     FeedbackModule,
-    /*  OpenaiModule, */
     MomoModule,
     SearchModule,
     PolicyModule,
     CustomerServiceModule,
-    ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [AppController],
   providers: [AppService],
