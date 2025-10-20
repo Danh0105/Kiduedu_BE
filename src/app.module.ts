@@ -19,7 +19,6 @@ import { FeedbackModule } from './feedback/feedback.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true,
       envFilePath: ['.env'],
       validationSchema: Joi.object({
         POSTGRES_HOST: Joi.string().required(),
