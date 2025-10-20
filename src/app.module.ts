@@ -55,11 +55,12 @@ import { FeedbackModule } from './feedback/feedback.module';
           },
           ssl: false,
           autoLoadEntities: true,
-          synchronize: !isProd,
+          synchronize: true,
           retryAttempts: 10,
           retryDelay: 2000,
           logging: isProd ? ['error'] : ['error', 'warn'],
           migrations: ['dist/migrations/*.js'],
+          logging: ['error'],
         };
       },
     }),
