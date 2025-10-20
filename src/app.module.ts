@@ -13,7 +13,9 @@ import { ProductModule } from './products/product.module';
 import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-
+import { PolicyModule } from './policy/policy.module';
+import { CustomerServiceModule } from './customer-service/customer-service.module';
+import { FeedbackModule } from './feedback/feedback.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -85,9 +87,12 @@ import { AppService } from './app.service';
     PromotionsModule,
     CartModule,
     StatisticsModule,
+    FeedbackModule,
     /*  OpenaiModule, */
     MomoModule,
     SearchModule,
+    PolicyModule,
+    CustomerServiceModule,
     ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [AppController],

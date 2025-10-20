@@ -45,7 +45,8 @@ services:
 
 volumes:
   pg_data:
-
+    external: true
+    name: pg_data_nestjs
 
 networks:
   app_net:
