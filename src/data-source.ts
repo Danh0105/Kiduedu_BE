@@ -20,7 +20,7 @@ export default new DataSource({
   port: Number(process.env.POSTGRES_PORT ?? 5432),
   username: process.env.POSTGRES_USER ?? 'postgres',
   password: process.env.POSTGRES_PASSWORD ?? 'postgres',
-  database: process.env.POSTGRES_DB ?? 'nestjs_db',
+  database: process.env.POSTGRES_DB ?? 'postgres',
 
   // Dùng migration → để false trong prod
   synchronize: false,

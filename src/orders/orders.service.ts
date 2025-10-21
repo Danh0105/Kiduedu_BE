@@ -73,7 +73,6 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
     return order;
   }
-
   async updateStatus(id: number, status: string): Promise<Order> {
     const order = await this.findOne(id);
     order.status = status;

@@ -1,4 +1,5 @@
 import { Expose, Type } from 'class-transformer';
+import { ProductAttributeValue } from '../entities/product-attribute-value.entity'; // Import ProductAttributeValue if you want to include it
 
 class ImageResponseDto {
   @Expose()
@@ -14,6 +15,19 @@ class CategoryResponseDto {
 
   @Expose()
   category_name: string;
+}
+
+// If you want to include attribute values, define a DTO for it
+class ProductAttributeValueResponseDto {
+  @Expose()
+  product_attribute_value_id: number;
+
+  @Expose()
+  attribute_value: string;
+
+  // You might want to include the attribute name as well
+  @Expose()
+  attribute_name: string; // Assuming you have a way to get the attribute name
 }
 
 export class ProductResponseDto {
@@ -48,10 +62,28 @@ export class ProductResponseDto {
   updated_at: Date;
 
   @Expose()
+  // Thêm các cột mới: specs, origin, user_manual, caution_notes
+  specs: any; // Keep as any, or define a more specific DTO if specs has a fixed structure
+
+  @Expose()
+  origin: string;
+
+  @Expose()
+  user_manual: string;
+
+  @Expose()
+  caution_notes: string;
+
+  @Expose()
   @Type(() => CategoryResponseDto)
   category: CategoryResponseDto;
 
   @Expose()
   @Type(() => ImageResponseDto)
   images: ImageResponseDto[];
+
+  // Nếu bạn muốn hiển thị các giá trị thuộc tính trong DTO phản hồi
+  // @Expose()
+  // @Type(() => ProductAttributeValueResponseDto)
+  // attributeValues: ProductAttributeValueResponseDto[];
 }
