@@ -7,7 +7,7 @@ module.exports = {
             script: "dist/main.js",
 
             // Dùng Node LTS tuyệt đối cho PM2 (đổi path này đúng bản Node trên server bạn)
-            interpreter: "/root/.nvm/versions/node/v20.11.1/bin/node",
+            interpreter: "/usr/bin/node",
 
             instances: 1,                // hoặc "max"
             exec_mode: "fork",           // hoặc "cluster"
