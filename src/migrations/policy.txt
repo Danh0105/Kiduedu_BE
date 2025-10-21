@@ -1,0 +1,134 @@
+2069e08c-6456-45f0-b92b-e41de806c4b9,Quy trình xử lý đổi / trả hàng,"• Thời gian xử lý: tối đa 02 tuần kể từ ngày nhận đủ thông tin và chứng từ của khách hàng.
+• Hình thức xử lý: Đổi hàng hoặc sửa chữa theo quy định của nhà sản xuất, nhà cung cấp hoặc trung tâm bảo hành ủy quyền.
+• Mọi quy trình được thực hiện minh bạch, đảm bảo quyền lợi khách hàng theo quy định của pháp luật.",CSDTH,2025-10-20 06:45:09.826508,2025-10-20 06:45:09.826508
+2456e7bf-2a7c-4121-aeb6-fdb5db0558b2,Thời hạn ước tính cho việc giao hàng,"Sau khi nhận được thông tin đặt hàng, chúng tôi sẽ xử lý đơn trong vòng 24 giờ và liên hệ xác nhận thông tin thanh toán – giao nhận với khách hàng.
+
+⏰ Thời gian giao hàng dự kiến: 3 – 5 ngày kể từ khi chốt đơn hoặc theo thỏa thuận.
+
+Một số trường hợp có thể kéo dài hơn do:
+• Không liên lạc được với khách hàng qua điện thoại.
+• Địa chỉ giao hàng không chính xác hoặc khó tìm.
+• Số lượng đơn hàng tăng đột biến làm chậm tiến độ xử lý.
+• Đối tác cung cấp hoặc đơn vị vận chuyển bị chậm trễ ngoài dự kiến.
+
+🚚 Phí vận chuyển: Kido sử dụng dịch vụ vận chuyển ngoài, vì vậy phí giao hàng sẽ được tính theo biểu phí của đơn vị vận chuyển tùy khu vực và khối lượng hàng hóa. Chúng tôi sẽ thông báo cụ thể mức phí khi xác nhận đơn hàng.",CSGH,2025-10-20 06:40:57.041962,2025-10-20 06:40:57.041962
+444d325c-98f4-4853-ad43-c3d607c62655,Giới hạn về mặt địa lý cho việc giao hàng,"Với khách hàng ở tỉnh xa hoặc mua số lượng lớn, Kido sẽ sử dụng dịch vụ giao nhận của các công ty vận chuyển uy tín. 
+Cước phí sẽ được tính theo mức phí của đơn vị giao nhận hoặc theo thỏa thuận hợp đồng giữa hai bên.",CSGH,2025-10-20 06:41:34.915238,2025-10-20 06:41:34.915238
+538dbc70-6113-401a-a675-82ed17fed1c2,Chính sách đổi máy mới trong 30 ngày đầu,"Tất cả sản phẩm Laptop được bán tại Kido (trừ sản phẩm do nhà phân phối bảo hành riêng, ghi rõ trong phần chi tiết) sẽ được đổi mới trong 30 ngày đầu nếu gặp lỗi phần cứng không thể sửa chữa hoặc thay linh kiện.
+
+• Khách hàng không phải chi trả bất kỳ chi phí nào.
+• Sản phẩm được kiểm tra và xác nhận lỗi bởi kỹ thuật viên Kido.",CSBTBH,2025-10-20 06:43:12.3561,2025-10-20 06:43:12.3561
+663bd540-b129-4aae-9e4f-9f13b141f049,Các phương thức giao hàng,"Chúng tôi áp dụng 2 hình thức giao hàng linh hoạt để phù hợp với nhu cầu của khách hàng:
+
+• Mua hàng trực tiếp tại công ty hoặc cửa hàng Kido.
+• Giao hàng tận nơi (Ship hàng) thông qua các đơn vị vận chuyển chuyên nghiệp.",CSGH,2025-10-20 06:40:14.230941,2025-10-20 06:40:14.230941
+6e3051e1-ea04-46fb-be7f-b41e91428411,Thanh toán tiền mặt,Quý khách thanh toán trực tiếp bằng tiền mặt tại địa chỉ cửa hàng của chúng tôi. Nhân viên sẽ kiểm tra và xác nhận giao dịch ngay tại chỗ.,CSTT,2025-10-20 04:14:41.624201,2025-10-20 06:08:33.567578
+93569a63-8c44-4450-8178-096f09c0bd9d,Trường hợp được đổi / trả hàng,"Kido thực hiện đổi hàng hoặc hoàn tiền cho khách hàng trong các trường hợp sau (không hoàn phí vận chuyển, trừ khi lỗi thuộc về Kido):
+
+• Không đúng chủng loại, mẫu mã như quý khách đã đặt.
+• Không đủ số lượng, thiếu phụ kiện trong đơn hàng.
+• Tình trạng hàng hóa bên ngoài bị hư hại (bể vỡ, bong tróc) trong quá trình vận chuyển.
+• Sản phẩm không đạt chất lượng: hết hạn, hết bảo hành, không hoạt động, lỗi kỹ thuật từ nhà sản xuất.",CSDTH,2025-10-20 06:45:00.906102,2025-10-20 06:45:00.906102
+a462754b-5717-4afe-bd57-8928adccc2e3,Thanh toán tiền mặt,Quý khách thanh toán trực tiếp bằng tiền mặt tại địa chỉ cửa hàng của chúng tôi. Nhân viên sẽ kiểm tra và xác nhận giao dịch ngay tại chỗ.,CSTT,2025-10-20 04:07:33.268203,2025-10-20 04:07:33.268203
+a7c3eddd-3e58-444d-b9f0-d9d9a83ab58b,Xử lý khiếu nại và bảo hành,"Trong mọi trường hợp liên quan đến bảo hành hoặc sự cố kỹ thuật, quý khách có thể liên hệ trực tiếp với chúng tôi để được hướng dẫn thủ tục bảo hành và hỗ trợ kỹ thuật.
+Nhân viên của chúng tôi sẽ hướng dẫn cụ thể và thực hiện quy trình xử lý khiếu nại theo đúng chính sách và quy định của công ty.",CSXLKN,2025-10-20 06:35:23.600488,2025-10-20 06:35:23.600488
+b1869878-f526-4591-83c6-8fafe2d92f16,Trường hợp không được đổi / trả hàng,"• Khách hàng muốn đổi mẫu mã, chủng loại nhưng không báo trước.
+• Sản phẩm bị hư hại do khách hàng gây ra (rách bao bì, bong tróc, bể vỡ...).
+• Khách hàng sử dụng sai hướng dẫn gây hỏng hóc sản phẩm.
+• Không gửi phiếu bảo hành hoặc chứng từ đúng quy định trong thời hạn.
+• Khách hàng đã ký nhận hàng nhưng không phản hồi trong vòng 24h.",CSDTH,2025-10-20 06:45:05.462109,2025-10-20 06:45:05.462109
+b58aa5d9-2137-47dc-931d-e5151378fbc2,Thời gian bảo hành & bảo trì,"Thời gian làm việc tại Trung tâm bảo hành Kido:
+
+• Thứ 2 – Thứ 7: 9h30 – 16h30
+• Chủ nhật & ngày lễ: nghỉ
+
+Trong trường hợp cần hỗ trợ ngoài giờ, quý khách có thể liên hệ trước để được sắp xếp hỗ trợ nhanh nhất.",CSBTBH,2025-10-20 06:43:33.765825,2025-10-20 06:43:33.765825
+ba32a137-26de-4f85-8781-ee610ad416d9,Tiếp nhận khiếu nại,"Chúng tôi tiếp nhận mọi khiếu nại liên quan đến việc sử dụng sản phẩm, dịch vụ hoặc thái độ phục vụ của nhân viên tại Kido. Mọi phản ánh từ khách hàng là cơ sở quan trọng giúp chúng tôi không ngừng hoàn thiện chất lượng dịch vụ và chăm sóc khách hàng.",CSXLKN,2025-10-20 06:35:23.600488,2025-10-20 06:35:23.600488
+bd5c4070-ea40-4278-955c-b2337418308b,Chuyển khoản trước ,"Quý khách chuyển khoản theo thỏa thuận hoặc hợp đồng. Sau khi xác nhận thanh toán, chúng tôi sẽ tiến hành giao hàng đúng cam kết.
+
+Thông tin tài khoản sẽ đượccung cấp qua email hoặc điện thoại khi xác nhận đơn hàng.",CSTT,2025-10-20 04:15:30.418529,2025-10-20 04:30:13.292768
+cb18fd6f-951e-463c-ad75-789113de155d,Quyền lợi và điều kiện bảo hành,"Khách hàng mua sản phẩm tại Kido sẽ được hưởng đầy đủ quyền lợi bảo hành theo quy định của hãng sản xuất. 
+Kido không thay đổi chính sách gốc mà chỉ hỗ trợ thêm trong phạm vi cho phép.
+
+Điều kiện đổi/bảo hành:
+• Sản phẩm còn nguyên vẹn, không trầy xước hoặc bị can thiệp phần cứng.
+• Giữ đầy đủ phụ kiện, thùng hộp, sách hướng dẫn, phiếu bảo hành của Kido.
+• Tem bảo hành còn nguyên vẹn, không bị rách, tẩy xóa hoặc cạo sửa.
+• Mã số Serial / Service Tag trên máy trùng khớp với phiếu bảo hành.
+• Máy không bị rơi, va đập, vào nước, chập điện hoặc chịu tác động vật lý khác.",CSBTBH,2025-10-20 06:43:21.320454,2025-10-20 06:43:21.320454
+d311b030-9c7b-4290-a56f-db3a91eeaeea,Trường hợp đặc biệt & xử lý khi hết hàng đổi,"Trong trường hợp không còn sản phẩm mới để đổi, Kido sẽ chủ động thương lượng cùng khách hàng theo các hướng:
+• Đổi sang dòng máy tương đương với giá trị giữ nguyên như lúc mua.
+• Nếu chọn dòng máy cao hơn, khách hàng chỉ cần bù phần chênh lệch.
+• Nếu chọn dòng máy thấp hơn, Kido sẽ hoàn lại phần chênh lệch tương ứng.",CSBTBH,2025-10-20 06:43:26.337532,2025-10-20 06:43:26.337532
+d4d8c941-2213-4895-9b9d-038dd302f2e8,Điều kiện bảo hành hợp lệ,"• Mã vạch và số Serial còn nguyên vẹn, trùng với thông tin trong hệ thống Kido.
+• Phiếu bảo hành hợp lệ, ghi rõ ngày tháng và model chính xác.
+• Tem bảo hành còn nguyên, không bị rách, phai hoặc tẩy xóa.
+• Máy không bị va đập, móp méo, vô nước, cháy nổ hoặc chập điện.
+• Các sản phẩm có bảo hành chính hãng, khách hàng cần liên hệ qua Kido để được hướng dẫn, tránh rách tem hoặc tranh chấp.",CSBTBH,2025-10-20 06:43:29.921768,2025-10-20 06:43:29.921768
+df121b17-25d4-4072-a433-d2d98e959e18,Thời gian giải quyết khiếu nại,"Thời gian xử lý khiếu nại tối đa là 03 (ba) ngày làm việc kể từ khi nhận được khiếu nại chính thức từ khách hàng.
+
+Trong trường hợp đặc biệt hoặc bất khả kháng, hai bên sẽ chủ động thương lượng để đạt được giải pháp phù hợp và đảm bảo quyền lợi cho khách hàng.",CSXLKN,2025-10-20 06:35:23.600488,2025-10-20 06:35:23.600488
+53f79941-92ec-419f-9fc2-f2f344a1847f,Mục đích và phạm vi thu thập thông tin,"Kido.edu.vn không bán, chia sẻ hay trao đổi thông tin cá nhân của khách hàng cho bất kỳ bên thứ ba nào khác. Tất cả dữ liệu thu thập chỉ được sử dụng trong nội bộ công ty.
+
+Thông tin thu thập gồm:
+- Họ và tên
+- Địa chỉ
+- Điện thoại
+- Email
+- Tên sản phẩm, số lượng, thời gian giao nhận",CSBMTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+83278e02-528e-4509-9513-96a993587351,Những người hoặc tổ chức được tiếp cận thông tin,"Thông tin cá nhân có thể được chia sẻ cho các đối tượng sau (nếu cần thiết):
+- Công Ty TNHH Thương Mại Đầu Tư Xuất Nhập Khẩu Nguyễn Lê – đơn vị chủ quản Kido.
+- Các đối tác dịch vụ có ký hợp đồng thực hiện một phần dịch vụ (như giao hàng, thanh toán, kỹ thuật).",CSBMTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+86a0bce0-6c54-4983-8c88-ec747a5d26e1,Đơn vị thu thập và quản lý thông tin cá nhân,"Công Ty TNHH Thương Mại Đầu Tư Xuất Nhập Khẩu Nguyễn Lê
+Địa chỉ: 1288/25A Lê Văn Lương, X. Phước Kiển, H. Nhà Bè, TP. Hồ Chí Minh
+Điện thoại: 0789 636 979
+Website: Kido.edu.vn
+Email: lytran@ichiskill.edu.vn",CSBMTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+900050ba-96a2-4611-9e86-ee7bc88ac76b,Phạm vi sử dụng thông tin,"Thông tin cá nhân được sử dụng trong nội bộ Kido cho các mục đích:
+- Hỗ trợ khách hàng và xử lý đơn đặt hàng.
+- Cung cấp thông tin, dịch vụ và tư vấn theo yêu cầu của khách.
+- Gửi thông báo về sản phẩm, khuyến mãi, sự kiện (khi khách hàng đăng ký nhận).
+- Quản lý tài khoản khách hàng, xác nhận giao dịch tài chính liên quan đến thanh toán trực tuyến.",CSBMTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+f948f1dd-bcfc-4333-b00b-530209ed323e,Cơ chế tiếp nhận & giải quyết khiếu nại,"Kido luôn coi trọng việc bảo vệ thông tin khách hàng và cam kết:
+- Không chia sẻ, bán hoặc cho thuê thông tin cá nhân cho bất kỳ tổ chức nào.
+- Chỉ sử dụng thông tin để nâng cao chất lượng dịch vụ và chăm sóc khách hàng.
+- Giải quyết các khiếu nại, tranh chấp nhanh chóng, minh bạch.
+- Chia sẻ thông tin khách hàng với cơ quan pháp luật nếu có yêu cầu chính thức.
+
+Trong mọi trường hợp, nếu bạn phát hiện thông tin bị sử dụng sai mục đích, vui lòng liên hệ ngay qua hotline: 0789 636 979 hoặc email: lytran@ichiskill.edu.vn.",CSBMTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+38cdcb02-9289-4f3b-b269-070f72ae47f9,Thời gian lưu trữ thông tin,"Dữ liệu cá nhân được lưu trữ trong hệ thống của Kido cho đến khi khách hàng yêu cầu xóa bỏ. Để yêu cầu, vui lòng gửi email đến: lytran@ichiskill.edu.vn",DKTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+ffaba82b-0220-4979-8e62-5f689ab59cfe,Phương tiện và công cụ để tiếp cận & chỉnh sửa thông tin,"Kido không thu thập dữ liệu trực tiếp qua website. Thông tin khách hàng được ghi nhận qua email hoặc số điện thoại đặt hàng:
+- Email: lytran@ichiskill.edu.vn
+- Hotline: 0789 636 979
+
+Khách hàng có thể liên hệ qua các kênh trên để yêu cầu chỉnh sửa hoặc cập nhật dữ liệu cá nhân.",CSBMTT,2025-10-20 16:11:28.92356,2025-10-20 16:11:28.92356
+0cfe02b1-f608-4390-8779-1ca2bf831115,ĐIỀU 2: Quyền sở hữu trí tuệ,"Chúng tôi tôn trọng quyền sở hữu trí tuệ của các bên liên quan và yêu cầu người dùng cũng phải tôn trọng điều này.
+  Tất cả sản phẩm, dịch vụ, logo, thiết kế… trên website đều thuộc quyền sở hữu của Kido.
+  Mọi hành vi sao chép, sử dụng, chỉnh sửa hoặc khai thác trái phép đều bị nghiêm cấm nếu chưa có sự đồng ý bằng văn bản từ Kido.",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
+2c6de499-4887-4534-9512-3b7ec7cf0d31,ĐIỀU 1: Một số khái niệm,"<ul>
+    <li><strong>Kido.edu.vn:</strong> Website bán hàng trực tuyến các sản phẩm và dịch vụ công nghệ thông tin.</li>
+    <li><strong>Bên thứ 3:</strong> Các dịch vụ thanh toán qua Kido.edu.vn và các đối tác thanh toán khác của Kido.</li>
+  </ul>",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
+321187d2-c6e4-4d94-b414-131d22775da0,ĐIỀU 4: Khiếu nại đơn hàng,"Trong trường hợp khách hàng bị lừa đảo, thanh toán nhưng không nhận được hàng hoặc hàng sai mô tả,
+  vui lòng gửi email khiếu nại đến Kido. Chúng tôi sẽ tiến hành xác minh, làm việc với bên thứ ba và giải quyết theo đúng trách nhiệm của bên cung cấp dịch vụ thanh toán.",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
+5674148a-d843-412e-b983-9cd08155d3c5,ĐIỀU 6: Miễn trừ trách nhiệm,"<ul>
+    <li>Kido không chịu trách nhiệm nếu thông tin khách hàng bị lộ do virus, tấn công mạng hoặc sự cố từ thiết bị người dùng.</li>
+    <li>Không chịu trách nhiệm nếu việc thanh toán bị gián đoạn do lỗi hệ thống ngoài kiểm soát hoặc do bên thứ ba.</li>
+    <li>Miễn trừ trong trường hợp thiên tai, chiến tranh, khủng bố, đình công, hoặc các sự kiện bất khả kháng khác.</li>
+  </ul>",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
+9d659003-2c18-4b89-86f2-63f629dfde1c,ĐIỀU 5: Trách nhiệm của Kido.edu.vn,"<ul>
+    <li>Bảo mật và lưu trữ an toàn thông tin khách hàng.</li>
+    <li>Không chia sẻ hoặc mua bán dữ liệu khách hàng khi chưa có sự đồng ý.</li>
+    <li>Giải quyết thắc mắc, khiếu nại phát sinh từ lỗi hệ thống hoặc giao dịch của Kido.</li>
+    <li>Phối hợp với cơ quan chức năng khi có tố cáo, khiếu nại liên quan đến gian lận tài chính hoặc vi phạm pháp luật.</li>
+  </ul>",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
+9e9d6206-4820-4b59-bb6a-fd1ea060ec2b,ĐIỀU 3: Thông tin khách hàng,"<ul>
+    <li>Khi sử dụng dịch vụ, khách hàng cần cung cấp thông tin cá nhân và tài khoản để xác nhận giao dịch.</li>
+    <li><strong>Thông tin cá nhân:</strong> Được dùng để xác nhận thanh toán, hỗ trợ chăm sóc khách hàng và gửi khuyến mãi khi được khách hàng đồng ý. Mọi dữ liệu cá nhân được bảo mật tuyệt đối, chỉ tiết lộ khi có yêu cầu pháp lý.</li>
+    <li><strong>Thông tin tài khoản:</strong> Kido và các đối tác thanh toán (Visa, MasterCard…) áp dụng các biện pháp bảo mật cao nhất để đảm bảo an toàn tuyệt đối cho người dùng.</li>
+  </ul>",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
+e4fac1ed-fe19-4ff7-a963-6d158bed429e,ĐIỀU 7: Trách nhiệm của khách hàng,"<ul>
+    <li>Khách hàng chịu trách nhiệm về độ chính xác của thông tin cung cấp (cá nhân, tài khoản, thẻ tín dụng...). Kido có quyền hủy đơn hàng nếu phát hiện gian lận.</li>
+    <li>Khách hàng cần kiểm tra tài khoản sau khi thanh toán và thông báo sớm cho Kido khi có sự cố (trong vòng 7 ngày).</li>
+    <li>Cần chủ động cài đặt các biện pháp bảo vệ thiết bị để tránh bị tấn công hoặc nhiễm mã độc khi thanh toán.</li>
+  </ul>",DKTT,2025-10-20 16:34:59.294531,2025-10-20 16:34:59.294531
