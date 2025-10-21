@@ -1,5 +1,4 @@
 import { Expose, Type } from 'class-transformer';
-import { ProductAttributeValue } from '../entities/product-attribute-value.entity'; // Import ProductAttributeValue if you want to include it
 
 class ImageResponseDto {
   @Expose()

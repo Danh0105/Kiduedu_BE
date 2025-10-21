@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { CategoryAttribute } from './category-attribute.entity';
-import { ProductAttributeValue } from './product-attribute-value.entity';
 
 @Entity('attributes')
 export class Attribute {
@@ -16,6 +15,4 @@ export class Attribute {
   @OneToMany(() => CategoryAttribute, (ca) => ca.attribute)
   categoryAttributes: CategoryAttribute[];
 
-  @OneToMany(() => ProductAttributeValue, (pav) => pav.attribute)
-  productAttributeValues: ProductAttributeValue[];
 }

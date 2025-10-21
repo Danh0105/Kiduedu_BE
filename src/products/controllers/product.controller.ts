@@ -9,12 +9,12 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { ProductService } from './product.service';
-import { CreateProductDto } from './dto/create-product.dto';
+import { ProductService } from '../services/product.service';
+import { CreateProductDto } from '../dto/create-product.dto';
 import { Public } from 'src/auth/public.decorator';
 import { plainToInstance } from 'class-transformer';
-import { ProductResponseDto } from './dto/ProductResponse.dto';
-import { PaginatedResponseDto } from './dto/PaginatedResponse.dto';
+import { ProductResponseDto } from '../dto/ProductResponse.dto';
+import { PaginatedResponseDto } from '../dto/PaginatedResponse.dto';
 
 @Controller('products')
 export class ProductController {

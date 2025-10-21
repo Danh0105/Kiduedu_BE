@@ -1,6 +1,17 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsIn, IsInt, IsArray, ValidateNested } from 'class-validator';
+// src/products/dto/create-product.dto.ts
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsInt,
+  IsArray,
+  ValidateNested,
+  IsObject,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProductImageDto } from './product-image.dto';
+import { UserManualDto } from './user-manual.dto';
 
 export class CreateProductDto {
   @IsString()
@@ -38,4 +49,28 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductImageDto)
   images: CreateProductImageDto[];
+
+  // ====== BỔ SUNG 4 CỘT ======
+
+  // specs: JSONB tự do (key/value)
+  @IsOptional()
+  @IsObject()
+  specs?: Record<string, any>;
+
+  // origin: text ngắn
+  @IsOptional()
+  @IsString()
+  origin?: string;
+
+  // user_manual: object có validate riêng
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserManualDto)
+  user_manual?: UserManualDto;
+
+  // caution_notes: mảng string
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  caution_notes?: string[];
 }

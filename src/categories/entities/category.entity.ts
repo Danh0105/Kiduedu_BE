@@ -4,26 +4,28 @@ import { CategoryAttribute } from 'src/products/entities/category-attribute.enti
 
 @Entity('categories')
 export class Category {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'category_id' })
   category_id: number;
 
-  @Column({ length: 100 })
+  @Column({ name: 'category_name', length: 100 })
   category_name: string;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description: string | null;
 
-  @ManyToOne(() => Category, category => category.children, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Category, (category) => category.children, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'parent_category_id' })
-  parent: Category;
+  parent: Category | null;
 
-  @OneToMany(() => Category, category => category.parent)
+  @OneToMany(() => Category, (category) => category.parent)
   children: Category[];
 
-  @OneToMany(() => Product, product => product.category)
+  @OneToMany(() => Product, (product) => product.category)
   products: Product[];
 
   @OneToMany(() => CategoryAttribute, (ca) => ca.category)
   categoryAttributes: CategoryAttribute[];
-
 }

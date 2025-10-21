@@ -55,7 +55,7 @@ import { FeedbackModule } from './feedback/feedback.module';
           },
           ssl: false,
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: false,
           retryAttempts: 10,
           retryDelay: 2000,
           logging: isProd ? ['error'] : ['error', 'warn'],
