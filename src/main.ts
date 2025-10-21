@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import 'dotenv/config';
 import "reflect-metadata";
+// 👇 Hotfix: gắn crypto của Node vào global để @nestjs/typeorm khỏi lỗi
+import * as nodeCrypto from 'crypto';
+(global as any).crypto = nodeCrypto;
 
 
 async function bootstrap() {
