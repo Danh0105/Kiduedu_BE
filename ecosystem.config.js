@@ -4,7 +4,7 @@ module.exports = {
         {
             name: "kiduedu-be",
             cwd: "/var/www/Kiduedu_BE",
-            script: "dist/main.js",
+            script: "dist/src/main.js",
 
             // Dùng Node LTS tuyệt đối cho PM2 (đổi path này đúng bản Node trên server bạn)
             interpreter: "/usr/bin/node",
