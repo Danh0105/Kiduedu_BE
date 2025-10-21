@@ -12,7 +12,10 @@ module.exports = {
             instances: 1,                // hoặc "max"
             exec_mode: "fork",           // hoặc "cluster"
             max_memory_restart: "512M",
-            node_args: ["--enable-source-maps"],
+            node_args: [
+                "-r", "/var/www/Kiduedu_BE/dist/crypto-polyfill.js",// 👈 preload polyfill
+                "--enable-source-maps"
+            ],
 
             watch: false,
             ignore_watch: ["node_modules", "logs", ".git"],
