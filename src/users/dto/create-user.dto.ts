@@ -2,76 +2,92 @@ import {
   IsEmail,
   IsNotEmpty,
   IsOptional,
+  IsString,
   IsEnum,
-  ValidateNested,
   IsArray,
-  IsDateString,
+  ValidateNested,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CustomerType } from '../entities/user.entity';
 
-class AddressDto {
-  @IsNotEmpty()
+export class AddressDto {
+  @IsString()
   full_name: string;
 
-  @IsNotEmpty()
+  @IsString()
   phone_number: string;
 
-  @IsNotEmpty()
+  @IsString()
   street: string;
 
-  @IsNotEmpty()
+  @IsString()
   ward: string;
 
-  @IsNotEmpty()
+  @IsString()
   district: string;
 
-  @IsNotEmpty()
+  @IsString()
   city: string;
 
   @IsOptional()
   is_default?: boolean;
 }
+export class OrderItemInputDto {
+  @IsNumber()
+  variantId: number;
+
+  @IsNumber()
+  quantity: number;
+
+  @IsNumber()
+  prices: number;
+}
+
 
 export class CreateUserDto {
+  @IsString()
   @IsNotEmpty()
   username: string;
 
   @IsEmail()
   email: string;
 
-  @IsNotEmpty()
-  password: string;
-
   @IsOptional()
-  fullName?: string;
-
-  @IsOptional()
+  @IsString()
   role?: string;
 
-  @IsEnum(CustomerType)
-  customerType: CustomerType;
-
-  // Thông tin doanh nghiệp (nếu có)
   @IsOptional()
+  @IsEnum(CustomerType)
+  customerType?: CustomerType;
+
+  @IsOptional()
+  @IsString()
   companyName?: string;
 
   @IsOptional()
+  @IsString()
   taxId?: string;
 
   @IsOptional()
+  @IsString()
   businessEmail?: string;
 
-  // ✅ Ngày sinh (cho cá nhân)
   @IsOptional()
-  @IsDateString()
-  dateOfBirth?: string; // ISO format: "2025-09-05"
+  @IsString()
+  fullName?: string;
 
-  // Địa chỉ mặc định
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => AddressDto)
-  address: AddressDto;
+  address?: AddressDto;
 
   @IsArray()
-  items: { product_id: number; quantity: number; price_per_unit: number }[];
+  @ValidateNested({ each: true })
+  @Type(() => OrderItemInputDto)
+  items: OrderItemInputDto[];
 }

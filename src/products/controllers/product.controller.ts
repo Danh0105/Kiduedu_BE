@@ -37,10 +37,9 @@ export class ProductController {
   @Public()
   @Get()
   async findAll(@Query('page') page = 1, @Query('limit') limit = 12) {
-    const [products, total] = await this.productService.findAllPaginated(
-      Number(page),
-      Number(limit),
-    );
+    const { items: products, total, pages } =
+      await this.productService.findAllPaginated(page, limit);
+
 
     return plainToInstance(PaginatedResponseDto<ProductResponseDto>, {
       success: true,

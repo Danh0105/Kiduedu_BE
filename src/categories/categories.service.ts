@@ -12,16 +12,22 @@ export class CategoriesService {
     private readonly categoryRepo: Repository<Category>,
   ) { }
 
+  /** 🆕 Tạo danh mục mới */
   async create(dto: CreateCategoryDto): Promise<Category> {
     const category = this.categoryRepo.create({
-      category_name: dto.category_name,
-      description: dto.description,
+      categoryName: dto.category_name,
+      description: dto.description ?? null,
     });
 
+    // Nếu có parent_category_id -> liên kết danh mục cha
     if (dto.parent_category_id) {
-      const parent = await this.categoryRepo.findOneBy({ category_id: dto.parent_category_id });
+      const parent = await this.categoryRepo.findOne({
+        where: { categoryId: dto.parent_category_id },
+      });
       if (!parent) {
-        throw new NotFoundException('Parent category not found');
+        throw new NotFoundException(
+          `Parent category ID ${dto.parent_category_id} không tồn tại.`,
+        );
       }
       category.parent = parent;
     }
@@ -29,38 +35,54 @@ export class CategoriesService {
     return this.categoryRepo.save(category);
   }
 
+  /** 📜 Lấy toàn bộ danh mục */
   async findAll(): Promise<Category[]> {
     return this.categoryRepo.find({
       relations: ['parent', 'children'],
+      order: { categoryName: 'ASC' },
     });
   }
 
+  /** 🔍 Lấy chi tiết một danh mục */
   async findOne(id: number): Promise<Category> {
     const category = await this.categoryRepo.findOne({
-      where: { category_id: id },
+      where: { categoryId: id },
       relations: ['parent', 'children'],
     });
     if (!category) {
-      throw new NotFoundException('Category not found');
+      throw new NotFoundException(`Category ID ${id} không tồn tại.`);
     }
     return category;
   }
 
+  /** ✏️ Cập nhật danh mục */
   async update(id: number, dto: UpdateCategoryDto): Promise<Category> {
     const category = await this.findOne(id);
 
-    if (dto.category_name !== undefined) category.category_name = dto.category_name;
-    if (dto.description !== undefined) category.description = dto.description;
+    if (dto.category_name !== undefined)
+      category.categoryName = dto.category_name;
+    if (dto.description !== undefined)
+      category.description = dto.description;
 
     if (dto.parent_category_id !== undefined) {
-      const parent = await this.categoryRepo.findOneBy({ category_id: dto.parent_category_id });
-      if (!parent) throw new NotFoundException('Parent category not found');
-      category.parent = parent;
+      if (dto.parent_category_id === null) {
+        category.parent = null;
+      } else {
+        const parent = await this.categoryRepo.findOne({
+          where: { categoryId: dto.parent_category_id },
+        });
+        if (!parent)
+          throw new NotFoundException(
+            `Parent category ID ${dto.parent_category_id} không tồn tại.`,
+          );
+        category.parent = parent;
+      }
     }
 
     return this.categoryRepo.save(category);
   }
 
+  /** 🗑️ Xoá danh mục */
   async remove(id: number): Promise<void> {
     const category = await this.findOne(id);
     await this.categoryRepo.remove(category);

@@ -61,31 +61,51 @@ export class SearchService {
     if (!term && categoryId != null) {
       const items = await this.ds.query(
         `
-        WITH RECURSIVE cat_tree AS (
-          SELECT $1::int AS id
-          UNION ALL
-          SELECT c.category_id
-          FROM public.categories c
-          JOIN cat_tree t ON c.parent_category_id = t.id
-        )
-        SELECT
-          p.product_id,
-          p.product_name,
-          (p.price)::double precision AS price,
-          NULLIF(BTRIM(REGEXP_REPLACE(COALESCE(p.short_description,''), '<[^>]+>', ' ', 'g')), '') AS short_description,
-          NULL::double precision AS rank,
-          img.image_url
-        FROM public.products p
-        LEFT JOIN LATERAL (
-          SELECT pi.image_url
-          FROM public.product_images pi
-          WHERE pi.product_id = p.product_id
-          ORDER BY pi.is_primary DESC, pi.image_id ASC
-          LIMIT 1
-        ) AS img ON TRUE
-        WHERE p.category_id IN (SELECT id FROM cat_tree)
-        ORDER BY p.product_id DESC
-        LIMIT $2 OFFSET $3;
+      WITH RECURSIVE cat_tree AS (
+    SELECT $1::int AS id
+    UNION ALL
+    SELECT c.category_id
+    FROM public.categories c
+    JOIN cat_tree t ON c.parent_category_id = t.id
+  )
+  SELECT
+    p.product_id,
+    p.product_name,
+
+    -- ✅ Lấy giá hiện hành từ product_variant_prices
+    (
+      SELECT pvpr.price
+      FROM public.product_variant_prices pvpr
+      JOIN public.product_variants pv
+        ON pv.variant_id = pvpr.variant_id
+      WHERE pv.product_id = p.product_id
+        AND pvpr.start_at <= NOW()
+        AND (pvpr.end_at IS NULL OR pvpr.end_at >= NOW())
+      ORDER BY pvpr.start_at DESC
+      LIMIT 1
+    )::double precision AS price,
+
+    NULLIF(
+      BTRIM(REGEXP_REPLACE(COALESCE(p.short_description, ''), '<[^>]+>', ' ', 'g')),
+      ''
+    ) AS short_description,
+
+    NULL::double precision AS rank,
+
+    img.image_url
+
+  FROM public.products p
+  LEFT JOIN LATERAL (
+    SELECT pi.image_url
+    FROM public.product_images pi
+    WHERE pi.product_id = p.product_id
+    ORDER BY pi.is_primary DESC, pi.image_id ASC
+    LIMIT 1
+  ) AS img ON TRUE
+
+  WHERE p.category_id IN (SELECT id FROM cat_tree)
+  ORDER BY p.product_id DESC
+  LIMIT $2 OFFSET $3;
         `,
         [categoryId, limit, offset],
       );

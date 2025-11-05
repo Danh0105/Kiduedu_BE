@@ -31,7 +31,7 @@ export class CartService {
     const cart = await this.getCartByUser(userId);
 
     let item = await this.cartItemRepo.findOne({
-      where: { cart: { cart_id: cart.cart_id }, product: { product_id: productId } },
+      where: { cart: { cart_id: cart.cart_id }, product: { productId: productId } },
       relations: ['product'],
     });
 
@@ -40,7 +40,7 @@ export class CartService {
     } else {
       item = this.cartItemRepo.create({
         cart,
-        product: { product_id: productId } as Product,
+        product: { productId: productId } as Product,
         quantity,
       });
     }
@@ -52,7 +52,7 @@ export class CartService {
   async updateItem(userId: number, productId: number, quantity: number): Promise<Cart> {
     const cart = await this.getCartByUser(userId);
     const item = await this.cartItemRepo.findOne({
-      where: { cart: { cart_id: cart.cart_id }, product: { product_id: productId } },
+      where: { cart: { cart_id: cart.cart_id }, product: { productId: productId } },
     });
 
     if (!item) throw new NotFoundException('Item not found in cart');
@@ -66,7 +66,7 @@ export class CartService {
     const cart = await this.getCartByUser(userId);
     await this.cartItemRepo.delete({
       cart: { cart_id: cart.cart_id },
-      product: { product_id: productId },
+      product: { productId: productId },
     });
 
     return this.getCartByUser(userId);

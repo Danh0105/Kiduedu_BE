@@ -1,10 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
 import { Product } from '../entities/product.entity';
-import { CreateProductDto } from '../dto/create-product.dto';
 import { ProductImage } from '../entities/product-image.entity';
-import { Category } from 'src/categories/entities/category.entity';
+import { ProductVariant } from '../entities/product-variant.entity';
+import { Category } from '../../categories/entities/category.entity';
+import { CreateProductDto } from '../dto/create-product.dto';
+import { ProductResponseDto } from '../dto/ProductResponse.dto';
 
 @Injectable()
 export class ProductService {
@@ -15,127 +22,168 @@ export class ProductService {
     @InjectRepository(ProductImage)
     private readonly imageRepo: Repository<ProductImage>,
 
+    @InjectRepository(ProductVariant)
+    private readonly variantRepo: Repository<ProductVariant>,
+
     @InjectRepository(Category)
     private readonly categoryRepo: Repository<Category>,
 
-    private readonly ds: DataSource
+    private readonly ds: DataSource,
   ) { }
 
-  // Helper: map DTO -> Partial<Product> (đúng shape entity, đặc biệt JSONB & category)
-  private mapDtoToEntityPartial(dto: Partial<CreateProductDto>): Partial<Product> {
+  /** 🧩 Helper: map DTO → entity (chuẩn hoá key & nullable fields) */
+  private mapDtoToEntity(dto: Partial<CreateProductDto>): Partial<Product> {
     const patch: Partial<Product> = {
-      product_name: dto.product_name,
-      short_description: dto.short_description ?? undefined,
-      long_description: dto.long_description ?? undefined,
-      status: dto.status ?? undefined,
-      price: (dto.price as any) ?? undefined,          // numeric transformer xử lý
-      stock_quantity: dto.stock_quantity ?? undefined,
-      // JSONB
-      specs: dto.specs ?? undefined,                   // object | undefined
-      origin: dto.origin ?? undefined,                 // string | undefined
-      user_manual:
-        dto.user_manual === undefined
-          ? undefined
-          : (dto.user_manual
-            ? {
-              pdf: dto.user_manual.pdf,
-              video: dto.user_manual.video,
-              steps: dto.user_manual.steps ?? [],
-            }
-            : null),
-      caution_notes: dto.caution_notes ?? undefined,   // string[] | undefined
+      productName: dto.product_name,
+      shortDescription: dto.short_description ?? null,
+      longDescription: dto.long_description ?? null,
+      status: dto.status ?? 1,
+      specs: dto.specs ?? {},
+      origin: dto.origin ?? null,
+      userManual: dto.user_manual
+        ? {
+          pdf: dto.user_manual.pdf,
+          video: dto.user_manual.video,
+          steps: dto.user_manual.steps ?? [],
+        }
+        : null,
+      cautionNotes: dto.caution_notes ?? [],
     };
 
-    // Quan hệ Category: nếu có category_id thì gán quan hệ, nếu không truyền gì thì không đổi
     if (dto.category_id !== undefined) {
-      patch.category = dto.category_id ? ({ category_id: dto.category_id } as any) : null;
+      patch.category = dto.category_id
+        ? ({ categoryId: dto.category_id } as any)
+        : null;
     }
 
     return patch;
   }
 
+  /** 🆕 Tạo mới sản phẩm (kèm ảnh và biến thể) */
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    const { images, category_id, ...rest } = createProductDto;
+    const { images, variants, category_id, ...rest } = createProductDto;
 
-    // Giữ nguyên hành vi: yêu cầu category phải tồn tại
-    const category = await this.categoryRepo.findOneBy({ category_id });
-    if (!category) {
-      throw new Error(`Category with id ${category_id} not found`);
+    // Kiểm tra danh mục tồn tại
+    let category: Category | null = null;
+    if (category_id) {
+      category = await this.categoryRepo.findOne({
+        where: { categoryId: category_id },
+      });
+      if (!category) {
+        throw new NotFoundException(
+          `Category với ID ${category_id} không tồn tại`,
+        );
+      }
     }
-    let sku = (createProductDto as any).sku?.trim();
-    if (!sku) sku = makeSku(rest.product_name);
-    // Map DTO -> entity (đặt default hợp lý cho JSONB để tránh null)
-    const entity: Partial<Product> = {
-      ...this.mapDtoToEntityPartial(rest),
+
+    // Tạo sản phẩm chính
+    const productEntity = this.productRepo.create({
+      ...this.mapDtoToEntity(rest),
       category,
-      specs: rest.specs ?? {},                 // default {}
-      user_manual: rest.user_manual
-        ? { pdf: rest.user_manual.pdf, video: rest.user_manual.video, steps: rest.user_manual.steps ?? [] }
-        : null,                                // cho phép null
-      caution_notes: rest.caution_notes ?? [], // default []
-      sku,
-    };
+    });
 
-    const product = this.productRepo.create(entity);
-    await this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(productEntity);
 
-    // Lưu images (nếu có)
+    // 🖼️ Lưu ảnh sản phẩm (nếu có)
     if (images?.length) {
-      const productImages = images.map((image) =>
-        this.imageRepo.create({ ...image, product })
+      const imageEntities = images.map((img) =>
+        this.imageRepo.create({ ...img, product: savedProduct }),
       );
-      await this.imageRepo.save(productImages);
+      await this.imageRepo.save(imageEntities);
     }
 
-    // Load lại product kèm quan hệ
+    // 🧩 Lưu các biến thể (variants) nếu có
+    if (variants?.length) {
+      const variantEntities = variants.map((v) =>
+        this.variantRepo.create({
+          ...v,
+          product: savedProduct,
+        }),
+      );
+      await this.variantRepo.save(variantEntities);
+    }
+
+    // Load lại với quan hệ đầy đủ
     const productWithRelations = await this.productRepo.findOne({
-      where: { product_id: product.product_id },
-      relations: ['category', 'images'],
+      where: { productId: savedProduct.productId },
+      relations: ['category', 'images', 'variants'],
     });
-    if (!productWithRelations) throw new Error('Product not found after creation');
-    return productWithRelations;
+
+    return productWithRelations!;
   }
 
-  async findAll(): Promise<Product[]> {
-    return this.productRepo.find({
-      relations: ['images', 'category'],
-      order: { created_at: 'DESC' },
+  /** 🔍 Lấy chi tiết 1 sản phẩm (đầy đủ quan hệ) */
+  async findDetailed(productId: number): Promise<ProductResponseDto> {
+    const product = await this.productRepo.findOne({
+      where: { productId },
+      relations: [
+        'category',
+        'images',
+        'variants',
+        'variants.images', // lấy luôn ảnh variant
+      ],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product ${productId} không tồn tại`);
+    }
+
+    return plainToInstance(ProductResponseDto, product, {
+      excludeExtraneousValues: true,
     });
   }
 
-  async findOne(id: number): Promise<Product | null> {
-    return this.productRepo.findOne({
-      where: { product_id: id },
-      relations: ['images', 'category'],
-      // (order không ảnh hưởng findOne; bỏ cũng được. Giữ nguyên hành vi trả 1 bản ghi)
+  /** ✏️ Cập nhật sản phẩm */
+  async update(id: number, dto: Partial<CreateProductDto>): Promise<Product> {
+    const existing = await this.productRepo.findOne({
+      where: { productId: id },
     });
-  }
+    if (!existing) throw new NotFoundException(`Product ${id} không tồn tại`);
 
-  async update(id: number, data: Partial<CreateProductDto>): Promise<Product | null> {
-    // Map DTO -> Partial<Product> đúng shape (tránh truyền class DTO trực tiếp)
-    const patch = this.mapDtoToEntityPartial(data);
+    const patch = this.mapDtoToEntity(dto);
     await this.productRepo.update(id, patch);
-    return this.findOne(id);
+    return (await this.findOne(id))!;
   }
 
+  /** 🗑️ Xoá sản phẩm */
   async remove(id: number): Promise<void> {
+    const existing = await this.productRepo.findOne({
+      where: { productId: id },
+    });
+    if (!existing) throw new NotFoundException(`Product ${id} không tồn tại`);
+
     await this.productRepo.delete(id);
   }
 
-  async findAllPaginated(page = 1, limit = 10): Promise<[Product[], number]> {
-    return this.productRepo.findAndCount({
-      relations: ['images', 'category'],
-      order: { created_at: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
+  /** 🔍 Lấy sản phẩm đơn giản (không join phức tạp) */
+  async findOne(id: number): Promise<Product | null> {
+    return this.productRepo.findOne({
+      where: { productId: id },
+      relations: ['images', 'category', 'variants'],
     });
   }
 
+  /** 📄 Phân trang sản phẩm */
+  async findAllPaginated(
+    page = 1,
+    limit = 10,
+  ): Promise<{ items: Product[]; total: number; pages: number }> {
+    const [items, total] = await this.productRepo.findAndCount({
+      relations: ['images', 'category', 'variants'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return { items, total, pages: Math.ceil(total / limit) };
+  }
+
+  /** 🔎 Tìm kiếm toàn văn (Full-text search Postgres) */
   async searchProducts(q: string, page = 1, limit = 10) {
     const term = (q ?? '').trim();
-    if (!term) {
+    if (!term)
       return { items: [], pagination: { page, limit, total: 0, pages: 0 } };
-    }
+
     const offset = (page - 1) * limit;
 
     const items = await this.ds.query(
@@ -179,6 +227,7 @@ export class ProductService {
       `,
       [term],
     );
+
     const total: number = totalRes?.[0]?.count ?? 0;
 
     return {
@@ -186,16 +235,4 @@ export class ProductService {
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
-}
-export function makeSku(productName: string): string {
-  const base = (productName || 'PROD')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')     // bỏ dấu tiếng Việt
-    .replace(/[^a-zA-Z0-9]+/g, '-')      // non-alnum -> -
-    .replace(/^-+|-+$/g, '')             // trim -
-    .toUpperCase()
-    .slice(0, 20);                        // giới hạn độ dài
-
-  const ts = Date.now().toString().slice(-6); // 6 số cuối
-  return `${base || 'PROD'}-${ts}`;
 }

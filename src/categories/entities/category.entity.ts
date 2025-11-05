@@ -1,14 +1,21 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
 import { CategoryAttribute } from 'src/products/entities/category-attribute.entity';
 
 @Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn({ name: 'category_id' })
-  category_id: number;
+  categoryId: number;
 
   @Column({ name: 'category_name', length: 100 })
-  category_name: string;
+  categoryName: string;
 
   @Column({ name: 'description', type: 'text', nullable: true })
   description: string | null;

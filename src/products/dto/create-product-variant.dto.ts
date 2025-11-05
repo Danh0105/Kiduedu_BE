@@ -23,4 +23,8 @@ export class CreateProductVariantDto {
     @IsOptional()
     @IsInt()
     status?: number; // default 1
+
+    @IsOptional()
+    @IsString()
+    imageUrl?: string;
 }

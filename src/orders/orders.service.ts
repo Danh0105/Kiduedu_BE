@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+/* import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
@@ -44,14 +44,23 @@ export class OrdersService {
     const savedOrder: Order = await this.ordersRepo.save(order);
 
     // ✅ Tạo order_items
-    const items = data.items.map((i) =>
-      this.orderItemsRepo.create({
+    const variantIds = data.items.map((i) => i.variantId);
+    const itemsEntities = data.items.map((i) => {
+      const variant = variants.find((v) => v.variantId === i.variantId)!;
+
+      const pricePerUnit = variant.price;
+
+      if (!pricePerUnit)
+        throw new BadRequestException(`Không tìm thấy giá cho biến thể ${variant.variantId}`);
+
+      return mgr.create(OrderItem, {
         order: savedOrder,
-        product: { product_id: i.product_id } as any,
+        variant, // ✅ Thay vì product
         quantity: i.quantity,
-        price_per_unit: i.price_per_unit,
-      }),
-    );
+        price_per_unit: pricePerUnit,
+      });
+    });
+
 
     await this.orderItemsRepo.save(items);
 
@@ -84,3 +93,4 @@ export class OrdersService {
     await this.ordersRepo.remove(order);
   }
 }
+ */

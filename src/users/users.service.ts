@@ -1,5 +1,5 @@
 import { In } from 'typeorm';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User, CustomerType } from './entities/user.entity';
@@ -9,7 +9,8 @@ import { UserProfileIndividual } from './entities/user_profile_individual.entity
 import { UserProfileBusiness } from './entities/user_profile_business.entity';
 import { Order } from 'src/orders/entities/order.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
-import { Product } from 'src/products/entities/product.entity'; // <-- đảm bảo import đúng path
+import { ProductVariant } from 'src/products/entities/product-variant.entity';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -27,27 +28,7 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  async createUser(data: {
-    username: string;
-    email: string;
-    role?: string;
-    customerType?: CustomerType; // nếu không truyền => mặc định INDIVIDUAL
-    companyName?: string;
-    taxId?: string;
-    businessEmail?: string;
-    fullName?: string;
-    dateOfBirth?: string; // YYYY-MM-DD
-    address?: {
-      full_name: string;
-      phone_number: string;
-      street: string;
-      ward: string;
-      district: string;
-      city: string;
-      is_default?: boolean;
-    };
-    items: { product_id: number; quantity: number; price_per_unit: number }[];
-  }): Promise<{ user: User; order: Order; items: OrderItem[] }> {
+  async createUser(data: CreateUserDto): Promise<{ user: User; order: Order; items: OrderItem[] }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -56,13 +37,12 @@ export class UsersService {
       const mgr = queryRunner.manager;
       const customerType = data.customerType ?? CustomerType.INDIVIDUAL;
 
-      // 1) Tìm user theo email (ngoài transaction cũng được, nhưng để đồng nhất thì dùng mgr)
+      // 1️⃣ Tìm hoặc tạo user
       let savedUser = await mgr.getRepository(User).findOne({
         where: { email: data.email },
         relations: ['cart', 'addresses'],
       });
 
-      // 2) Nếu chưa có user -> tạo mới (toàn bộ bằng mgr)
       if (!savedUser) {
         const user = mgr.create(User, {
           username: data.username,
@@ -72,20 +52,20 @@ export class UsersService {
         });
         savedUser = await mgr.save(user);
 
-        // Cart
+        // Giỏ hàng
         const cart = mgr.create(Cart, { user: savedUser });
         await mgr.save(cart);
 
-        // Address
+        // Địa chỉ
         if (data.address) {
           const address = mgr.create(Address, { ...data.address, user: savedUser });
           await mgr.save(address);
         }
 
-        // Profile
+        // Hồ sơ
         if (customerType === CustomerType.BUSINESS) {
           const businessProfile = mgr.create(UserProfileBusiness, {
-            user: savedUser, // truyền entity, mgr sẽ gán user_id đúng
+            user: savedUser,
             company_name: data.companyName,
             tax_id: data.taxId,
             email: data.businessEmail,
@@ -101,30 +81,30 @@ export class UsersService {
         }
       }
 
-      // 3) Validate danh sách product trước khi tạo order items
-      const productIds = (data.items ?? []).map(i => i.product_id);
-      if (productIds.length === 0) {
+      // 3️⃣ Validate danh sách biến thể
+      const variantIds = (data.items ?? []).map((i) => i.variantId);
+      if (variantIds.length === 0) {
         throw new BadRequestException('Items must not be empty');
       }
 
-      const productRepo = mgr.getRepository(Product);
-      const products = await productRepo.find({
-        where: { product_id: In(productIds) },
-        select: ['product_id', 'price', 'product_name'],
+      const variantRepo = mgr.getRepository(ProductVariant);
+      const variants = await variantRepo.find({
+        where: { variantId: In(variantIds) },
+        relations: ['product'],
       });
 
-      const foundIds = new Set(products.map(p => p.product_id));
-      const missing = productIds.filter(id => !foundIds.has(id));
-
+      const foundIds = new Set(variants.map((v) => v.variantId));
+      const missing = variantIds.filter((id) => !foundIds.has(id));
       if (missing.length > 0) {
-        throw new BadRequestException(`Product(s) not found: ${missing.join(', ')}`);
+        throw new BadRequestException(`Variant(s) not found: ${missing.join(', ')}`);
       }
 
-      // 4) Tính toán order
-      const subtotal = data.items.reduce(
-        (sum, i) => sum + Number(i.price_per_unit) * Number(i.quantity),
-        0,
-      );
+      // 4️⃣ Tính toán đơn hàng (dựa trên variant.price)
+      const subtotal = data.items.reduce((sum, i) => {
+
+        return sum + Number(i.prices) * Number(i.quantity);
+      }, 0);
+
       const shipping_fee = 0;
       const total = subtotal + shipping_fee;
 
@@ -137,20 +117,20 @@ export class UsersService {
       });
       const savedOrder = await mgr.save(order);
 
-      // 5) Tạo order items (liên kết product bằng entity đã load để chắc chắn qua FK)
-      const itemsEntities = data.items.map(i => {
-        const product = products.find(p => p.product_id === i.product_id)!;
+      // 5️⃣ Tạo order items (liên kết variant)
+      const itemsEntities = data.items.map((i) => {
+        const variant = variants.find((v) => v.variantId === i.variantId)!;
         return mgr.create(OrderItem, {
           order: savedOrder,
-          product, // pass entity product để FK chắc chắn đúng
+          variant, // ✅ liên kết variant thay vì product
           quantity: i.quantity,
-          price_per_unit: i.price_per_unit,
+          price_per_unit: Number(variant.prices), // ✅ lấy giá từ variant
         });
       });
 
       const savedItems = await mgr.save(itemsEntities);
 
-      // 6) Commit
+      // 6️⃣ Commit transaction
       await queryRunner.commitTransaction();
       return { user: savedUser, order: savedOrder, items: savedItems };
     } catch (err) {

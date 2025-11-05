@@ -1,49 +1,73 @@
 import { Expose, Type } from 'class-transformer';
+import { CreateProductVariantDto } from './create-product-variant.dto';
+import { ProductVariantResponseDto } from './product-variant-response.dto';
 
-class ImageResponseDto {
+// 🖼️ DTO cho ảnh sản phẩm
+export class ImageResponseDto {
   @Expose()
-  image_id: number;
+  imageId: number;
 
   @Expose()
-  image_url: string;
+  imageUrl: string;
+
+  @Expose()
+  altText?: string;
+
+  @Expose()
+  isPrimary?: boolean;
 }
 
-class CategoryResponseDto {
+// 🗂️ DTO cho danh mục
+export class CategoryResponseDto {
   @Expose()
-  category_id: number;
+  categoryId: number;
 
   @Expose()
-  category_name: string;
+  categoryName: string;
+
+  @Expose()
+  description?: string;
 }
 
-// If you want to include attribute values, define a DTO for it
-class ProductAttributeValueResponseDto {
-  @Expose()
-  product_attribute_value_id: number;
-
-  @Expose()
-  attribute_value: string;
-
-  // You might want to include the attribute name as well
-  @Expose()
-  attribute_name: string; // Assuming you have a way to get the attribute name
+// ⚙️ DTO cho thông số kỹ thuật (specs)
+export class SpecsDto {
+  [key: string]: any;
 }
 
+// 📖 DTO cho hướng dẫn sử dụng
+export class UserManualDto {
+  @Expose()
+  pdf?: string;
+
+  @Expose()
+  video?: string;
+
+  @Expose()
+  steps?: string[];
+}
+
+// ⚠️ Ghi chú an toàn / lưu ý sản phẩm
+export class CautionNotesDto {
+  @Expose()
+  notes: string[];
+}
+
+// 🧩 DTO phản hồi chính cho Product
 export class ProductResponseDto {
   @Expose()
-  product_id: number;
+  productId: number;
 
   @Expose()
-  product_name: string;
+  productName: string;
 
   @Expose()
-  sku: string;
+  sku?: string;
 
   @Expose()
-  short_description: string;
+  shortDescription?: string;
 
   @Expose()
-  long_description: string;
+  longDescription?: string;
 
   @Expose()
   status: number;
@@ -52,37 +76,41 @@ export class ProductResponseDto {
   price: number;
 
   @Expose()
-  stock_quantity: number;
+  stockQuantity: number;
 
   @Expose()
-  created_at: Date;
+  createdAt: Date;
 
   @Expose()
-  updated_at: Date;
+  updatedAt: Date;
+
+  // ====== Các trường JSONB ======
+  @Expose()
+  @Type(() => SpecsDto)
+  specs: Record<string, any>;
 
   @Expose()
-  // Thêm các cột mới: specs, origin, user_manual, caution_notes
-  specs: any; // Keep as any, or define a more specific DTO if specs has a fixed structure
+  origin?: string;
 
   @Expose()
-  origin: string;
+  @Type(() => UserManualDto)
+  userManual?: UserManualDto | null;
 
   @Expose()
-  user_manual: string;
+  @Type(() => CautionNotesDto)
+  cautionNotes?: string[];
 
-  @Expose()
-  caution_notes: string;
-
+  // ====== Quan hệ ======
   @Expose()
   @Type(() => CategoryResponseDto)
-  category: CategoryResponseDto;
+  category?: CategoryResponseDto | null;
 
   @Expose()
   @Type(() => ImageResponseDto)
-  images: ImageResponseDto[];
+  images?: ImageResponseDto[];
 
-  // Nếu bạn muốn hiển thị các giá trị thuộc tính trong DTO phản hồi
-  // @Expose()
-  // @Type(() => ProductAttributeValueResponseDto)
-  // attributeValues: ProductAttributeValueResponseDto[];
+
+  @Expose()
+  @Type(() => ProductVariantResponseDto)
+  variants?: ProductVariantResponseDto[];
 }

@@ -1,77 +1,104 @@
-// src/products/entities/product.entity.ts
 import {
-  Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany,
-  PrimaryGeneratedColumn, UpdateDateColumn, RelationId
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  RelationId,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Category } from '../../categories/entities/category.entity';
 import { ProductImage } from './product-image.entity';
 import { OrderItem } from '../../orders/entities/order-item.entity';
 import { ProductVariant } from './product-variant.entity';
 
-// (tuỳ chọn) transformer cho numeric -> number
-const numericToNumber = {
-  to: (v?: number | null) => v ?? null,
-  from: (v?: string | null) => (v != null ? Number(v) : null),
-};
-
-@Entity('products')
+@Entity({ name: 'products' })
 export class Product {
-  @PrimaryGeneratedColumn() product_id: number;
+  /** 🔑 Khóa chính */
+  @PrimaryGeneratedColumn({ name: 'product_id' })
+  productId: number;
 
-  @Column({ length: 255 }) product_name: string;
+  /** 🏷️ Tên sản phẩm */
+  @Column({ name: 'product_name', length: 255 })
+  productName: string;
 
-  @Column({ length: 50, unique: true, nullable: true }) sku: string;
+  /** 📄 Mô tả chi tiết */
+  @Column({ name: 'long_description', type: 'text', nullable: true })
+  longDescription?: string | null;
 
-  @Column({ type: 'text', nullable: true }) long_description: string | null;
+  /** ✏️ Mô tả ngắn gọn */
+  @Column({ name: 'short_description', type: 'text', nullable: true })
+  shortDescription?: string | null;
 
-  @Column({ type: 'text', nullable: true }) short_description: string | null;
+  /** ⚙️ Trạng thái: 1=active, 0=inactive */
+  @Column({ name: 'status', type: 'int', default: 1 })
+  status: number;
 
-  @Column({ type: 'int', default: 1 }) status: number;
+  /** 🧾 Thông số kỹ thuật (JSONB) */
+  @Column({ name: 'specs', type: 'jsonb', nullable: false, default: () => `'{}'::jsonb` })
+  specs: Record<string, any>;
 
-  @Column({ type: 'numeric', precision: 12, scale: 2, transformer: numericToNumber })
-  price: number;
+  /** 🌍 Xuất xứ (text) */
+  @Column({ name: 'origin', type: 'text', nullable: true })
+  origin?: string | null;
 
-  @Column({ type: 'int', default: 0 }) stock_quantity: number;
+  /** 📘 Hướng dẫn sử dụng (có thể chứa PDF, video, hoặc bước hướng dẫn) */
+  @Column({ name: 'user_manual', type: 'jsonb', nullable: true })
+  userManual?: { pdf?: string; video?: string; steps?: string[] } | null;
 
-  @ManyToOne(() => Category, (c) => c.products, { onDelete: 'RESTRICT', onUpdate: 'CASCADE', nullable: true })
+  /** ⚠️ Ghi chú / cảnh báo an toàn */
+  @Column({ name: 'caution_notes', type: 'jsonb', nullable: false, default: () => `'[]'::jsonb` })
+  cautionNotes: string[];
+
+  /** 🔍 Vector tìm kiếm (full-text search) */
+  @Column({
+    name: 'search_vec',
+    type: 'tsvector',
+    select: false,
+    insert: false,
+    update: false,
+    nullable: true,
+  })
+  searchVec?: any;
+
+  /** 🗂️ Danh mục sản phẩm */
+  @ManyToOne(() => Category, (c) => c.products, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+    nullable: true,
+  })
   @JoinColumn({ name: 'category_id' })
   category?: Category | null;
 
   @RelationId((p: Product) => p.category)
-  category_id?: number | null;
+  categoryId?: number | null;
 
-  @CreateDateColumn({ type: 'timestamp without time zone', default: () => 'NOW()' })
-  created_at: Date;
-
-  @UpdateDateColumn({ type: 'timestamp without time zone', default: () => 'NOW()' })
-  updated_at: Date;
-
-  @Column({ name: 'specs', type: 'jsonb', nullable: false })
-  specs: Record<string, any>;
-
-  // origin: text, cho phép null
-  @Column({ name: 'origin', type: 'text', nullable: true })
-  origin: string | null;
-
-  // user_manual: JSONB, CHO PHÉP NULL
-  @Column({ name: 'user_manual', type: 'jsonb', nullable: true })
-  user_manual: { pdf?: string; video?: string; steps?: string[] } | null;
-
-
-  // caution_notes: jsonb, default [], NOT NULL
-  @Column({ name: 'caution_notes', type: 'jsonb', nullable: false, default: () => `'[]'::jsonb` })
-  caution_notes: string[];
-
-
-  @Column({ type: 'tsvector', select: false, insert: false, update: false, nullable: true })
-  search_vec: any;
-
-  @OneToMany(() => ProductImage, (img) => img.product, { cascade: true, onDelete: 'CASCADE' })
+  /** 🖼️ Ảnh sản phẩm (quan hệ 1-N) */
+  @OneToMany(() => ProductImage, (img) => img.product, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   images: ProductImage[];
 
-  @OneToMany(() => OrderItem, (item) => item.product)
-  orderItems: OrderItem[];
-
-  @OneToMany(() => ProductVariant, (v) => v.product)
+  /** 📦 Danh sách biến thể (variants) */
+  @OneToMany(() => ProductVariant, (v) => v.product, { cascade: true })
   variants: ProductVariant[];
+
+
+  /** 🕒 Ngày tạo & cập nhật */
+  @CreateDateColumn({
+    name: 'created_at',
+    type: 'timestamp without time zone',
+    default: () => 'NOW()',
+  })
+  createdAt: Date;
+
+  @UpdateDateColumn({
+    name: 'updated_at',
+    type: 'timestamp without time zone',
+    default: () => 'NOW()',
+  })
+  updatedAt: Date;
 }

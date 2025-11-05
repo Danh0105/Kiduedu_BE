@@ -8,8 +8,8 @@ import { MomoModule } from './momo/momo.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { CartModule } from './cart/cart.module';
 import { PromotionsModule } from './promotions/promotions.module';
-import { OrdersModule } from './orders/order.module';
-import { CategoriesModule } from './categories/category.module';
+/* import { OrdersModule } from './orders/order.module';
+ */import { CategoriesModule } from './categories/category.module';
 import { ProductModule } from './products/product.module';
 import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
@@ -68,8 +68,8 @@ import { FeedbackModule } from './feedback/feedback.module';
     AuthModule,
     ProductModule,
     CategoriesModule,
-    OrdersModule,
-    PromotionsModule,
+/*     OrdersModule,
+ */    PromotionsModule,
     CartModule,
     StatisticsModule,
     FeedbackModule,
