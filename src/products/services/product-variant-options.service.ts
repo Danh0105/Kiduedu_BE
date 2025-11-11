@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { ProductVariantOptionValue } from '../entities/product-variant-option-value.entity';
 import { OptionValue } from '../entities/option-value.entity';
 import { AddVariantOptionDto } from '../dto/add-variant-option.dto';
+import { ProductVariant } from '../entities/product-variant.entity';
 
 @Injectable()
 export class ProductVariantOptionsService {
@@ -13,11 +14,18 @@ export class ProductVariantOptionsService {
 
         @InjectRepository(OptionValue)
         private readonly optionValueRepo: Repository<OptionValue>,
-    ) { }
 
-    async listOptions(variantId: number) {
+        @InjectRepository(ProductVariant)
+        private readonly variantsRepo: Repository<ProductVariant>,
+    ) { }
+    private baseQB(productId: number): SelectQueryBuilder<ProductVariant> {
+        return this.variantsRepo
+            .createQueryBuilder('v')
+            .where('v.productId = :productId', { productId });
+    }
+    async listOptions(productId: number) {
         const list = await this.variantOptionRepo.find({
-            where: { variantId },
+            where: { productId },
             relations: ['optionValue'],
         });
 
@@ -27,7 +35,7 @@ export class ProductVariantOptionsService {
         }));
     }
 
-    async addOption(variantId: number, dto: AddVariantOptionDto) {
+    async addOption(productId: number, dto: AddVariantOptionDto) {
         const option = await this.optionValueRepo.findOne({
             where: { optionValueId: dto.optionValueId },
         });
@@ -36,7 +44,7 @@ export class ProductVariantOptionsService {
 
         const exist = await this.variantOptionRepo.findOne({
             where: {
-                variantId,
+                productId,
                 optionValueId: dto.optionValueId,
             },
         });
@@ -45,23 +53,24 @@ export class ProductVariantOptionsService {
             throw new ConflictException('Option value này đã tồn tại trong variant');
 
         const newLink = this.variantOptionRepo.create({
-            variantId,
+            productId,
             optionValueId: dto.optionValueId,
         });
 
         return this.variantOptionRepo.save(newLink);
     }
 
-    async removeOption(variantId: number, optionValueId: number) {
+    async removeOption(productId: number, optionValueId: number) {
         const record = await this.variantOptionRepo.findOne({
-            where: { variantId, optionValueId },
+            where: { productId, optionValueId },
         });
 
         if (!record)
             throw new NotFoundException('Option value không thuộc variant này');
 
-        await this.variantOptionRepo.delete({ variantId, optionValueId });
+        await this.variantOptionRepo.delete({ productId, optionValueId });
 
         return { message: 'Đã xóa option value khỏi variant' };
     }
+
 }

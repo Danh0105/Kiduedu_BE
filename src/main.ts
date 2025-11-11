@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
 import 'dotenv/config';
 import "reflect-metadata";
 
@@ -7,6 +8,7 @@ import "reflect-metadata";
 async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const whitelist = [
     'https://www.kidoedu.edu.vn',
     'https://kidoedu.vn',

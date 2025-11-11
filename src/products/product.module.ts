@@ -20,6 +20,15 @@ import { ProductVariantOptionValue } from './entities/product-variant-option-val
 import { OptionValue } from './entities/option-value.entity';
 import { ProductVariantPricesController } from './controllers/product-variant-prices.controller';
 import { ProductVariantPricesService } from './services/product-variant-prices.service';
+import { ProductRentalsController } from './controllers/product-rentals.controller';
+import { ProductRentalsService } from './services/product-rentals.service';
+import { RentalOrder } from './entities/rental-order.entity';
+import { RentalOrderItem } from './entities/rental-order-item.entity';
+import { RentalOrdersController } from './controllers/rental-orders.controller';
+import { RentalOrdersService } from './services/rental-orders.service';
+import { OptionType } from './entities/option-type.entity';
+import { ProductVariantOptionsController } from './controllers/product-variant-options.controller';
+import { ProductVariantOptionsService } from './services/product-variant-options.service';
 @Module({
   imports: [
     AuthModule,
@@ -36,11 +45,15 @@ import { ProductVariantPricesService } from './services/product-variant-prices.s
       ProductVariantRental,
       ProductVariantOptionValue,
       OptionValue,
+      RentalOrder,
+      RentalOrderItem,
+      OptionType,
+
     ]),
 
   ],
-  controllers: [ProductController, ProductVariantsController, ProductVariantPricesController],
-  providers: [ProductService, ProductVariantsService, ProductVariantPricesService],
-  exports: [ProductVariantsService, ProductVariantPricesService],
+  controllers: [ProductController, ProductVariantsController, ProductVariantPricesController, ProductVariantOptionsController, ProductRentalsController, RentalOrdersController],
+  providers: [ProductService, ProductVariantsService, ProductVariantOptionsService, ProductVariantPricesService, ProductRentalsService, RentalOrdersService],
+  exports: [ProductVariantsService, ProductVariantPricesService, ProductVariantOptionsService],
 })
 export class ProductModule { }

@@ -24,7 +24,7 @@ export default new DataSource({
 
   // Dùng migration → để false trong prod
   synchronize: false,
-
+  dropSchema: false,
   // Bật log khi dev, prod chỉ error (giảm noise)
   logging: isProd ? ['error'] : ['error', 'warn'],
 

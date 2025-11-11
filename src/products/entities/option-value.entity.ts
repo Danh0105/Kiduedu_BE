@@ -1,21 +1,38 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
+import { OptionType } from './option-type.entity';
 import { ProductVariantOptionValue } from './product-variant-option-value.entity';
 
-@Entity('option_values')
+@Entity({ name: 'option_values' })
 export class OptionValue {
   @PrimaryGeneratedColumn({ name: 'option_value_id' })
   optionValueId: number;
 
-  @Column({ name: 'option_type_id' })
+  @Column({ name: 'option_type_id', type: 'integer' })
   optionTypeId: number;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   value: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'integer', default: 0 })
   position: number;
 
-  // ✅ Quan hệ ngược lại: 1 option value có thể thuộc nhiều variant
-  @OneToMany(() => ProductVariantOptionValue, (pvo) => pvo.optionValue)
-  variantLinks: ProductVariantOptionValue[];
+  @ManyToOne(() => OptionType, (optionType) => optionType.optionValues, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'option_type_id' })
+  optionType: OptionType;
+  @OneToMany(
+    () => ProductVariantOptionValue,
+    (optionLink) => optionLink.optionValue,
+    { cascade: true },
+  )
+  variantOptionLinks: ProductVariantOptionValue[];
+
 }

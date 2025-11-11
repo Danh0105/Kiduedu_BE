@@ -50,7 +50,6 @@ export class ProductRentalsService {
 
         const rental = this.rentalRepo.create({
             variantId: dto.variantId,
-            userId,
             rentalType: dto.rentalType,
             startDate: dto.startDate,
             endDate: dto.endDate,

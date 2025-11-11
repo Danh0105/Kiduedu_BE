@@ -50,4 +50,5 @@ export class ProductVariantsController {
     ) {
         return this.service.remove(productId, variantId);
     }
+
 }
