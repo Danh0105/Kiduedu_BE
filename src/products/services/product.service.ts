@@ -10,6 +10,7 @@ import { ProductImage } from '../entities/product-image.entity';
 import { ProductVariant } from '../entities/product-variant.entity';
 import { Category } from '../../categories/entities/category.entity';
 import { CreateProductDto } from '../dto/create-product.dto';
+import { ProductVariantPrice } from '../entities/product-variant-price.entity';
 
 /* =========================== Helpers =========================== */
 // Ưu tiên kiểu giá: sale → promo → retail → base
@@ -117,6 +118,8 @@ export class ProductService {
     private readonly categoryRepo: Repository<Category>,
 
     private readonly ds: DataSource,
+
+    @InjectRepository(ProductVariantPrice) private readonly productVariantPriceRepo: Repository<ProductVariantPrice>,
   ) { }
 
   /** 🧩 Helper: map DTO → entity (chuẩn hoá key & nullable fields) */
@@ -281,7 +284,7 @@ export class ProductService {
     return product;
   }
 
-  /** 📄 Phân trang (nhẹ): product + category + variants (không load prices để nhẹ) */
+  /** 📄 Phân trang (nhẹ): product + category + variants + prices (current) */
   async findAllPaginated(
     page = 1,
     limit = 10,
@@ -293,18 +296,123 @@ export class ProductService {
       take: limit,
     });
 
-    // chuẩn hoá tối thiểu để FE đỡ null-check
+    // --- lấy tất cả variantId của trang hiện tại
+    const variantIds: number[] = items.flatMap((p: any) =>
+      (p.variants || []).map((v: any) => v.id || v.variantId)
+    );
+
+    // Nếu không có variant nào thì chuẩn hoá rồi trả về
+    if (variantIds.length === 0) {
+      const normalized = items.map((p: any) => ({
+        ...p,
+        cautionNotes: Array.isArray(p.cautionNotes) ? p.cautionNotes : [],
+        userManual: normalizeUserManual(p.userManual),
+        variants: (p.variants || []).map((v: any) => ({
+          ...v,
+          attributes: typeof v.attributes === 'object' && !Array.isArray(v.attributes) ? v.attributes : {},
+          specs: Array.isArray(v.specs) ? v.specs : [],
+        })),
+        priceRange: null,
+      }));
+      return { items: normalized as any, total, pages: Math.ceil(total / limit) };
+    }
+
+    const now = new Date();
+
+    // --- Lấy "giá hiện hành" cho mỗi variant (start_at <= now <= end_at hoặc end_at null)
+    // Sắp xếp để hàng đầu tiên theo mỗi variant là new nhất → chọn ở phía TS để tránh DISTINCT ON
+    const rawPrices = await this.productVariantPriceRepo
+      .createQueryBuilder('pvp')
+      .select([
+        '"pvp"."variant_id"    AS "variantId"',
+        '"pvp"."price"         AS "price"',
+        '"pvp"."currency_code" AS "currencyCode"',
+        '"pvp"."price_type"    AS "priceType"',
+        '"pvp"."start_at"      AS "startAt"',
+        '"pvp"."end_at"        AS "endAt"',
+        '"pvp"."created_at"    AS "createdAt"',
+        '"pvp"."price_id"      AS "priceId"',
+      ])
+      .where('pvp.variantId IN (:...variantIds)', { variantIds })
+      .andWhere('pvp.startAt <= :now', { now })
+      .andWhere('(pvp.endAt IS NULL OR pvp.endAt >= :now)', { now })
+      .orderBy('pvp.variantId', 'ASC')
+      .addOrderBy('pvp.startAt', 'DESC')
+      .addOrderBy('pvp.createdAt', 'DESC')
+      .getRawMany<{
+        variantId: number;
+        price: string | number;
+        salePrice: string | number | null;
+        currency: string | null;
+        startAt: Date;
+        endAt: Date | null;
+        createdAt: Date;
+        id: number;
+      }>();
+
+    // Chọn bản ghi "đầu tiên" cho mỗi variantId (đã được sort DESC theo hiệu lực/gần nhất)
+    const currentPriceByVariant = new Map<number, {
+      price: number;
+      salePrice: number | null;
+      currency: string | null;
+      startAt: Date;
+      endAt: Date | null;
+      id: number;
+    }>();
+    for (const row of rawPrices) {
+      if (!currentPriceByVariant.has(row.variantId)) {
+        currentPriceByVariant.set(row.variantId, {
+          price: Number(row.price ?? 0),
+          salePrice: row.salePrice != null ? Number(row.salePrice) : null,
+          currency: row.currency ?? 'VND',
+          startAt: row.startAt,
+          endAt: row.endAt,
+          id: row.id,
+        });
+      }
+    }
+
+    // --- Chuẩn hoá + gắn giá vào từng variant, đồng thời tính priceRange cho product
     const normalized = items.map((p: any) => {
       p.cautionNotes = Array.isArray(p.cautionNotes) ? p.cautionNotes : [];
-      p.userManual = normalizeUserManual(p.userManual); // ⬅️ thêm dòng này
-      p.variants = (p.variants || []).map((v: any) => ({
-        ...v,
-        attributes: typeof v.attributes === 'object' && !Array.isArray(v.attributes) ? v.attributes : {},
-        specs: Array.isArray(v.specs) ? v.specs : [],
-      }));
+      p.userManual = normalizeUserManual(p.userManual);
+
+      let minPrice: number | null = null;
+      let maxPrice: number | null = null;
+
+      p.variants = (p.variants || []).map((v: any) => {
+        const variantId = v.id || v.variantId;
+        const cp = currentPriceByVariant.get(variantId);
+
+        const basePrice = cp?.price ?? null;
+        const salePrice = cp?.salePrice ?? null;
+        const finalPrice = salePrice ?? basePrice; // ưu tiên sale nếu có
+
+        if (finalPrice != null) {
+          minPrice = minPrice == null ? finalPrice : Math.min(minPrice, finalPrice);
+          maxPrice = maxPrice == null ? finalPrice : Math.max(maxPrice, finalPrice);
+        }
+
+        return {
+          ...v,
+          attributes: typeof v.attributes === 'object' && !Array.isArray(v.attributes) ? v.attributes : {},
+          specs: Array.isArray(v.specs) ? v.specs : [],
+          // Giá gắn trực tiếp cho FE:
+          price: basePrice,            // giá gốc
+          salePrice,                   // giá KM (nếu có)
+          finalPrice,                  // giá dùng để hiển thị
+          currency: cp?.currency ?? 'VND',
+          priceEffective: cp ? { startAt: cp.startAt, endAt: cp.endAt, priceId: cp.id } : null,
+        };
+      });
+
+      // Price range cấp product (dựa trên finalPrice của các variants)
+      p.priceRange = (minPrice != null && maxPrice != null)
+        ? { min: minPrice, max: maxPrice, currency: 'VND' }
+        : null;
+
       return p;
     });
-
 
     return { items: normalized as any, total, pages: Math.ceil(total / limit) };
   }

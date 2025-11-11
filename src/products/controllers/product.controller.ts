@@ -52,7 +52,7 @@ export class ProductController {
         last_page: Math.ceil(total / limit),
       },
       data: plainToInstance(ProductResponseDto, products, {
-        excludeExtraneousValues: true,
+        excludeExtraneousValues: false,
       }),
     });
   }
