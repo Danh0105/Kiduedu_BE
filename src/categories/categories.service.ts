@@ -14,19 +14,21 @@ export class CategoriesService {
 
   /** 🆕 Tạo danh mục mới */
   async create(dto: CreateCategoryDto): Promise<Category> {
+
     const category = this.categoryRepo.create({
-      categoryName: dto.category_name,
-      description: dto.description ?? null,
+      categoryName: dto.categoryName,
+
+      description: dto.description?.trim() || null,
     });
 
     // Nếu có parent_category_id -> liên kết danh mục cha
-    if (dto.parent_category_id) {
+    if (dto.parentCategoryId) {
       const parent = await this.categoryRepo.findOne({
-        where: { categoryId: dto.parent_category_id },
+        where: { categoryId: dto.parentCategoryId },
       });
       if (!parent) {
         throw new NotFoundException(
-          `Parent category ID ${dto.parent_category_id} không tồn tại.`,
+          `Parent category ID ${dto.parentCategoryId} không tồn tại.`,
         );
       }
       category.parent = parent;
@@ -59,21 +61,21 @@ export class CategoriesService {
   async update(id: number, dto: UpdateCategoryDto): Promise<Category> {
     const category = await this.findOne(id);
 
-    if (dto.category_name !== undefined)
-      category.categoryName = dto.category_name;
+    if (dto.categoryName !== undefined)
+      category.categoryName = dto.categoryName;
     if (dto.description !== undefined)
       category.description = dto.description;
 
-    if (dto.parent_category_id !== undefined) {
-      if (dto.parent_category_id === null) {
+    if (dto.parentCategoryId !== undefined) {
+      if (dto.parentCategoryId === null) {
         category.parent = null;
       } else {
         const parent = await this.categoryRepo.findOne({
-          where: { categoryId: dto.parent_category_id },
+          where: { categoryId: dto.parentCategoryId },
         });
         if (!parent)
           throw new NotFoundException(
-            `Parent category ID ${dto.parent_category_id} không tồn tại.`,
+            `Parent category ID ${dto.parentCategoryId} không tồn tại.`,
           );
         category.parent = parent;
       }

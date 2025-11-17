@@ -1,25 +1,60 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Order } from './order.entity';
 import { ProductVariant } from '../../products/entities/product-variant.entity';
 
 @Entity('order_items')
 export class OrderItem {
-  @PrimaryGeneratedColumn()
-  order_item_id: number;
+  @PrimaryGeneratedColumn({ name: 'order_item_id' })
+  orderItemId: number;
 
-  // 🔗 Liên kết đến Order
-  @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
+  @Index()
+  @Column({ name: 'order_id', type: 'int' })
+  orderId: number;
+
+  @ManyToOne(() => Order, (order) => order.items, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'order_id' })
   order: Order;
 
-  // 🔗 Liên kết đến ProductVariant (thay vì Product)
-  @ManyToOne(() => ProductVariant, (variant) => variant.orderItems, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'variant_id' })
+  @Index()
+  @Column({ name: 'variant_id', type: 'int' })
+  variantId: number;
+
+  @ManyToOne(() => ProductVariant, (variant) => variant.orderItems, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  })
+  @JoinColumn({ name: 'variant_id', referencedColumnName: 'variantId' })
   variant: ProductVariant;
 
-  @Column()
+  @Column({ type: 'int', default: 1 })
   quantity: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
-  price_per_unit: number;
+  @Column({
+    name: 'price_per_unit',
+    type: 'numeric',
+    nullable: false,
+    transformer: {
+      to: (v: number) => v,
+      from: (v: string) => Number(v),
+    },
+  })
+  pricePerUnit: number;
+
+  @Column({
+    name: 'attributes',
+    type: 'jsonb',
+    nullable: false,
+    default: () => `'{}'::jsonb`,
+  })
+  attributes: Record<string, any>;
 }

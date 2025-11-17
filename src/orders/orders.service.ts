@@ -1,8 +1,13 @@
-/* import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
+import { CreateOrderDto } from './dto/create-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -14,74 +19,64 @@ export class OrdersService {
     private readonly orderItemsRepo: Repository<OrderItem>,
   ) { }
 
-  async create(data: {
-    user_id: number;
-    shipping_address: string;
-    promotion_id?: number;
-    items: { product_id: number; quantity: number; price_per_unit: number }[];
-  }): Promise<Order> {
+  async create(data: CreateOrderDto): Promise<Order> {
+    if (!data.items || data.items.length === 0) {
+      throw new BadRequestException('Đơn hàng phải có ít nhất 1 sản phẩm');
+    }
+
     const subtotal = data.items.reduce(
-      (sum, i) => sum + i.price_per_unit * i.quantity,
+      (sum, i) => sum + i.pricePerUnit * i.quantity,
       0,
     );
+    const discountAmount = 0;
+    const totalAmount = subtotal - discountAmount;
 
-    const discount = 0;
-    const total = subtotal - discount;
-
-    // ✅ Tạo order
+    // 🧾 Tạo Order – chỉ dùng các field có trong entity
     const order = this.ordersRepo.create({
-      user: { user_id: data.user_id } as any, // dùng relation
+      userId: data.userId ?? null,
+      promotionId: data.promotionId ?? null,
       subtotal,
-      discount_amount: discount,
-      total_amount: total,
+      discountAmount,
+      totalAmount,
       status: 'Pending',
-      promotion: data.promotion_id
-        ? ({ promotion_id: data.promotion_id } as any)
-        : null,
     });
 
-    // ✅ Lưu order (chắc chắn trả về Order, không phải Order[])
     const savedOrder: Order = await this.ordersRepo.save(order);
 
-    // ✅ Tạo order_items
-    const variantIds = data.items.map((i) => i.variantId);
-    const itemsEntities = data.items.map((i) => {
-      const variant = variants.find((v) => v.variantId === i.variantId)!;
-
-      const pricePerUnit = variant.price;
-
-      if (!pricePerUnit)
-        throw new BadRequestException(`Không tìm thấy giá cho biến thể ${variant.variantId}`);
-
-      return mgr.create(OrderItem, {
+    // 📦 Tạo OrderItems gắn vào order vừa tạo
+    const orderItems: OrderItem[] = data.items.map((i) =>
+      this.orderItemsRepo.create({
         order: savedOrder,
-        variant, // ✅ Thay vì product
+        orderId: savedOrder.orderId,
+        variantId: i.variantId,
         quantity: i.quantity,
-        price_per_unit: pricePerUnit,
-      });
-    });
+        pricePerUnit: i.pricePerUnit,
+        attributes: i.attributes ?? {},
+      }),
+    );
 
+    await this.orderItemsRepo.save(orderItems);
 
-    await this.orderItemsRepo.save(items);
-
-    savedOrder.items = items;
+    savedOrder.items = orderItems;
     return savedOrder;
   }
 
   async findAll(): Promise<Order[]> {
     return this.ordersRepo.find({
-      relations: ['items'],
+      relations: ['items', 'items.variant', 'user', 'promotion'],
+      order: { orderDate: 'DESC' },
     });
   }
 
   async findOne(id: number): Promise<Order> {
     const order = await this.ordersRepo.findOne({
-      where: { order_id: id },
-      relations: ['items'],
+      where: { orderId: id },
+      relations: ['items', 'items.variant', 'user', 'promotion'],
     });
     if (!order) throw new NotFoundException('Order not found');
     return order;
   }
+
   async updateStatus(id: number, status: string): Promise<Order> {
     const order = await this.findOne(id);
     order.status = status;
@@ -93,4 +88,3 @@ export class OrdersService {
     await this.ordersRepo.remove(order);
   }
 }
- */

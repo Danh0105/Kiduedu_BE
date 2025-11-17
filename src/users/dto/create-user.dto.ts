@@ -7,9 +7,13 @@ import {
   IsArray,
   ValidateNested,
   IsNumber,
+  IsObject,
+  Min,
+  IsInt,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { CustomerType } from '../entities/user.entity';
+import { Column } from 'typeorm';
 
 export class AddressDto {
   @IsString()
@@ -34,14 +38,17 @@ export class AddressDto {
   is_default?: boolean;
 }
 export class OrderItemInputDto {
-  @IsNumber()
-  variantId: number;
+  @IsInt() variantId: number;
+  @IsInt() @Min(1) quantity: number;
 
+  // order-item.entity.ts
   @IsNumber()
-  quantity: number;
+  @Min(0)
+  @Type(() => Number)
+  pricePerUnit: number;
 
-  @IsNumber()
-  prices: number;
+  @IsOptional() @IsObject()
+  attributes?: Record<string, any>;
 }
 
 

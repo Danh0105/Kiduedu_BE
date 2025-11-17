@@ -11,6 +11,7 @@ import { Type } from 'class-transformer';
 import { CreateProductImageDto } from './product-image.dto';
 import { UserManualDto } from './user-manual.dto';
 import { CreateProductVariantDto } from './create-product-variant.dto';
+import { InitialReceiptDto } from './initial-receipt.dto';
 
 export class CreateProductDto {
   /** 🏷️ Tên sản phẩm */
@@ -75,4 +76,9 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
   variants?: CreateProductVariantDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => InitialReceiptDto)
+  initialReceipt?: InitialReceiptDto;
 }

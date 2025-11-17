@@ -22,7 +22,7 @@ export class User {
   @PrimaryGeneratedColumn()
   user_id: number;
 
-  @Column({ unique: true, length: 50 })
+  @Column({ length: 50 })
   username: string;
 
   @Column({ unique: true, length: 100 })
@@ -31,20 +31,11 @@ export class User {
   @Column({ length: 255, nullable: true })
   password_hash: string;
 
-  @Column({ length: 100, nullable: true })
-  full_name: string;
-
-  @Column({ length: 20, nullable: true })
-  phone_number: string;
-
   @Column({ default: 'customer' })
   role: string;
 
   @Column({ length: 255, nullable: true })
   images_url: string;
-
-  @Column({ length: 255, nullable: true })
-  address: string;
 
   @Column({
     type: 'enum',

@@ -29,6 +29,9 @@ import { RentalOrdersService } from './services/rental-orders.service';
 import { OptionType } from './entities/option-type.entity';
 import { ProductVariantOptionsController } from './controllers/product-variant-options.controller';
 import { ProductVariantOptionsService } from './services/product-variant-options.service';
+import { InventoryReceipt } from './entities/inventory-receipt.entity';
+import { InventoryReceiptItem } from './entities/inventory-receipt-item.entity';
+import { Supplier } from './entities/supplier.entity';
 @Module({
   imports: [
     AuthModule,
@@ -48,7 +51,9 @@ import { ProductVariantOptionsService } from './services/product-variant-options
       RentalOrder,
       RentalOrderItem,
       OptionType,
-
+      InventoryReceipt,
+      InventoryReceiptItem,
+      Supplier,
     ]),
 
   ],

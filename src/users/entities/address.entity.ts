@@ -1,39 +1,41 @@
+// address.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+import { User } from './user.entity';
 
 @Entity('addresses')
 export class Address {
-  @PrimaryGeneratedColumn()
-  address_id: number;
+  @PrimaryGeneratedColumn({ name: 'address_id' })
+  addressId: number;
 
-  @ManyToOne(() => User, user => user.addresses, { onDelete: 'CASCADE' })
-  user: User;
-
-  @Column({ length: 100 })
+  @Column({ name: 'full_name', length: 100 })
   full_name: string;
 
-  @Column({ length: 20 })
+  @Column({ name: 'phone_number', length: 20 })
   phone_number: string;
 
-  @Column({ length: 255 })
+  @Column({ name: 'street', length: 255 })
   street: string;
 
-  @Column({ length: 100 })
+  @Column({ name: 'ward', length: 100 })
   ward: string;
 
-  @Column({ length: 100 })
+  @Column({ name: 'district', length: 100 })
   district: string;
 
-  @Column({ length: 100 })
+  @Column({ name: 'city', length: 100 })
   city: string;
 
-  @Column({ default: false })
+  @Column({ name: 'is_default', type: 'boolean', default: false })
   is_default: boolean;
 
-
+  // cột userUserId trong DB
+  @ManyToOne(() => User, (u) => u.addresses)
+  @JoinColumn({ name: 'userUserId' })
+  user: User;
 }

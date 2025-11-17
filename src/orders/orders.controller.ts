@@ -1,4 +1,5 @@
-/* import {
+// orders.controller.ts
+import {
   Controller,
   Post,
   Body,
@@ -10,13 +11,16 @@
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
 import { Public } from '../auth/public.decorator';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) { }
+
   @Public()
   @Post()
-  async create(@Body() body: any): Promise<Order> {
+  async create(@Body() body: CreateOrderDto): Promise<Order> {
     return this.ordersService.create(body);
   }
 
@@ -33,7 +37,7 @@ export class OrdersController {
   @Put(':id/status')
   async updateStatus(
     @Param('id') id: number,
-    @Body() body: { status: string },
+    @Body() body: UpdateOrderStatusDto,
   ): Promise<Order> {
     return this.ordersService.updateStatus(+id, body.status);
   }
@@ -44,4 +48,3 @@ export class OrdersController {
     return { message: 'Order deleted successfully' };
   }
 }
- */

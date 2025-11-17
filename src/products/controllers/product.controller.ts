@@ -66,7 +66,7 @@ export class ProductController {
       message: 'Products retrieved successfully',
       statusCode: HttpStatus.OK,
       data: plainToInstance(ProductResponseDto, product, {
-        excludeExtraneousValues: true,
+        excludeExtraneousValues: false,
       }),
     });
   }

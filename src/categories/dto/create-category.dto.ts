@@ -1,5 +1,15 @@
+// create-category.dto.ts
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
 export class CreateCategoryDto {
-  category_name: string;
-  description?: string;
-  parent_category_id?: number;
+  @IsString()
+  @IsNotEmpty()
+  categoryName: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string | null;
+
+  @IsOptional()
+  parentCategoryId?: number | null;
 }

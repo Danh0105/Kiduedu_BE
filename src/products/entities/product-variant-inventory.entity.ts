@@ -1,7 +1,8 @@
 import {
   Entity,
+  PrimaryColumn,
   Column,
-  PrimaryGeneratedColumn,
+  UpdateDateColumn,
   OneToOne,
   JoinColumn,
 } from 'typeorm';
@@ -9,25 +10,22 @@ import { ProductVariant } from './product-variant.entity';
 
 @Entity('product_variant_inventory')
 export class ProductVariantInventory {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column()
+  // Dùng luôn variant_id làm PK
+  @PrimaryColumn({ name: 'variant_id', type: 'int' })
   variant_id: number;
 
-  @Column({ default: 0 })
+  @Column({ name: 'stock_quantity', type: 'int', default: 0 })
   stock_quantity: number;
 
-  @Column({ default: 0 })
+  @Column({ name: 'safety_stock', type: 'int', default: 0 })
   safety_stock: number;
 
-  @Column({ type: 'timestamp', default: () => 'now()' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
 
-  // ✅ Sửa lại mối quan hệ thành OneToOne
   @OneToOne(() => ProductVariant, (variant) => variant.inventory, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'variant_id' })
+  @JoinColumn({ name: 'variant_id', referencedColumnName: 'variantId' })
   variant: ProductVariant;
 }

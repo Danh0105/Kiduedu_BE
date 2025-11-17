@@ -54,13 +54,10 @@ export class ProductVariantsService {
     }
 
     /** Lấy specs ở cấp Product để fallback khi variant chưa có specs */
+    /** Lấy specs ở cấp Product để fallback khi variant chưa có specs */
     private async getProductSpecs(productId: number): Promise<SpecItem[]> {
-        const rows = await this.variantsRepo.query(
-            `SELECT specs FROM public.products WHERE product_id = $1 LIMIT 1`,
-            [productId],
-        );
-        const productSpecs = rows?.[0]?.specs ?? [];
-        return sortSpecs(toSpecArray(productSpecs));
+        // Hiện tại không dùng specs ở cấp Product nữa → fallback rỗng
+        return [];
     }
 
     // ⚙️ LẤY DANH SÁCH BIẾN THỂ (kèm giá & thuộc tính & specs)
@@ -206,6 +203,7 @@ export class ProductVariantsService {
         const entity = this.variantsRepo.create({
             ...dto,
             status: dto.status ?? 1,
+            specs: dto.specs ?? [],
         });
         return this.variantsRepo.save(entity);
     }
