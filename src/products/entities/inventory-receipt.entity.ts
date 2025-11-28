@@ -24,9 +24,9 @@ export class InventoryReceipt {
     receiptCode: string;
 
     @Column('date', {
-        name: 'receipt_date',
+        name: 'receipt_date', nullable: true,
     })
-    receiptDate: string; // hoặc Date
+    receiptDate: Date | null; // hoặc Date
 
     @Column('int', {
         name: 'supplier_id',
@@ -52,7 +52,7 @@ export class InventoryReceipt {
         scale: 2,
         default: 0,
     })
-    totalAmount: number;
+    totalAmount: number | null;
 
     @Column('timestamptz', {
         name: 'created_at',

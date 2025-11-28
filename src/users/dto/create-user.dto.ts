@@ -10,6 +10,7 @@ import {
   IsObject,
   Min,
   IsInt,
+  ValidateIf,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CustomerType } from '../entities/user.entity';
@@ -38,17 +39,28 @@ export class AddressDto {
   is_default?: boolean;
 }
 export class OrderItemInputDto {
-  @IsInt() variantId: number;
-  @IsInt() @Min(1) quantity: number;
+  @ValidateIf(o => o.variantId !== null && o.variantId !== undefined)
+  @IsInt()
+  variantId?: number | null;
 
-  // order-item.entity.ts
+
+  @ValidateIf(o => o.productId !== null)
+  @IsInt()
+  productId?: number | null;
+
+  @IsInt()
+  @Min(1)
+  quantity: number;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  @Type(() => Number)
-  pricePerUnit: number;
+  pricePerUnit?: number;
 
-  @IsOptional() @IsObject()
+  @IsOptional()
+  @IsObject()
   attributes?: Record<string, any>;
+
 }
 
 

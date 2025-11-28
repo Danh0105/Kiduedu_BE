@@ -8,6 +8,7 @@ import {
     MaxLength,
     IsArray,
     ValidateNested,
+    IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateVariantPriceDto } from './create-variant-price.dto';
@@ -52,7 +53,6 @@ export class CreateProductVariantDto {
     @Type(() => SpecItemInputDto)
     specs?: SpecItemInputDto[];
 }
-
 export class SpecItemInputDto {
     @IsString()
     key: string;
@@ -64,14 +64,18 @@ export class SpecItemInputDto {
     value: string;
 
     @IsOptional()
+    @IsString()
     unit?: string | null;
 
     @IsOptional()
+    @IsIn(['text', 'number', 'boolean'])
     type?: 'text' | 'number' | 'boolean';
 
     @IsOptional()
+    @IsString()
     group?: string | null;
 
     @IsOptional()
+    @IsString()
     note?: string | null;
 }

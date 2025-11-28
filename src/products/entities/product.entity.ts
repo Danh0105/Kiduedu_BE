@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -85,7 +86,7 @@ export class Product {
 
   /** 📦 Biến thể (nếu còn dùng: chỉ chứa thông tin thương mại như SKU/giá/tồn kho) */
   @OneToMany(() => ProductVariant, (v) => v.product, { cascade: true })
-  variants: ProductVariant[];
+  variants?: ProductVariant[] | null;
 
   /** 🕒 Ngày tạo & cập nhật */
   @CreateDateColumn({
@@ -101,4 +102,8 @@ export class Product {
     default: () => 'NOW()',
   })
   updatedAt: Date;
+
+  @Column({ name: 'price', type: 'decimal', precision: 12, scale: 2 })
+  price: number;
+
 }

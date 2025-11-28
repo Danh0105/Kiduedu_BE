@@ -1,7 +1,18 @@
-import { IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateProductImageDto {
   @IsString()
-  image_url: string;
+  imageUrl: string;
 
+  @IsOptional()
+  @IsString()
+  publicId?: string;
+
+  @IsOptional()
+  @IsString()
+  altText?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isPrimary?: boolean = false;
 }

@@ -15,10 +15,6 @@ export class InitialReceiptItemDto {
     @IsInt()
     variantId?: number;
 
-    @IsOptional()
-    @IsString()
-    variantSku?: string;
-
     @IsNumber()
     @IsPositive()
     quantity: number;
@@ -52,6 +48,10 @@ export class InitialReceiptDto {
     @IsOptional()
     @IsString()
     supplierNote?: string;
+
+    @IsNumber()
+    @IsOptional()
+    totalAmount?: number;
 
     @IsOptional()
     @IsString()

@@ -24,10 +24,10 @@ export class OrdersService {
       throw new BadRequestException('Đơn hàng phải có ít nhất 1 sản phẩm');
     }
 
-    const subtotal = data.items.reduce(
+    const subtotal = 0;/* data.items.reduce(
       (sum, i) => sum + i.pricePerUnit * i.quantity,
       0,
-    );
+    ); */
     const discountAmount = 0;
     const totalAmount = subtotal - discountAmount;
 
@@ -63,7 +63,7 @@ export class OrdersService {
 
   async findAll(): Promise<Order[]> {
     return this.ordersRepo.find({
-      relations: ['items', 'items.variant', 'user', 'promotion'],
+      relations: ['items', 'items.variant', 'user', 'promotion', 'items.variant.product'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -71,7 +71,7 @@ export class OrdersService {
   async findOne(id: number): Promise<Order> {
     const order = await this.ordersRepo.findOne({
       where: { orderId: id },
-      relations: ['items', 'items.variant', 'user', 'promotion'],
+      relations: ['items', 'items.variant', 'user', 'promotion', 'items.variant.product'],
     });
     if (!order) throw new NotFoundException('Order not found');
     return order;

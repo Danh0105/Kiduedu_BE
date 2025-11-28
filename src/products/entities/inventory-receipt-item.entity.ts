@@ -23,8 +23,9 @@ export class InventoryReceiptItem {
 
     @Column('int', {
         name: 'variant_id',
+        nullable: true,
     })
-    variantId: number;
+    variantId: number | null;
 
     @Column('int', {
         name: 'quantity',

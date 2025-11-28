@@ -32,6 +32,7 @@ import { ProductVariantOptionsService } from './services/product-variant-options
 import { InventoryReceipt } from './entities/inventory-receipt.entity';
 import { InventoryReceiptItem } from './entities/inventory-receipt-item.entity';
 import { Supplier } from './entities/supplier.entity';
+import { UploadService } from 'src/upload/upload.service';
 @Module({
   imports: [
     AuthModule,
@@ -58,7 +59,7 @@ import { Supplier } from './entities/supplier.entity';
 
   ],
   controllers: [ProductController, ProductVariantsController, ProductVariantPricesController, ProductVariantOptionsController, ProductRentalsController, RentalOrdersController],
-  providers: [ProductService, ProductVariantsService, ProductVariantOptionsService, ProductVariantPricesService, ProductRentalsService, RentalOrdersService],
+  providers: [UploadService, ProductService, ProductVariantsService, ProductVariantOptionsService, ProductVariantPricesService, ProductRentalsService, RentalOrdersService],
   exports: [ProductVariantsService, ProductVariantPricesService, ProductVariantOptionsService],
 })
 export class ProductModule { }

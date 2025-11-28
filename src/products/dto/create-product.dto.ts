@@ -6,6 +6,7 @@ import {
   IsArray,
   ValidateNested,
   IsObject,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProductImageDto } from './product-image.dto';
@@ -17,17 +18,17 @@ export class CreateProductDto {
   /** 🏷️ Tên sản phẩm */
   @IsString()
   @IsNotEmpty()
-  product_name: string;
+  productName: string;
 
   /** ✏️ Mô tả ngắn */
   @IsString()
   @IsOptional()
-  short_description?: string;
+  shortDescription?: string;
 
   /** 📄 Mô tả chi tiết */
   @IsString()
   @IsOptional()
-  long_description?: string;
+  longDescription?: string;
 
   /** ⚙️ Trạng thái (1=active, 0=inactive) */
   @Type(() => Number)
@@ -39,7 +40,7 @@ export class CreateProductDto {
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  category_id?: number;
+  categoryId?: number;
 
   /** 🖼️ Danh sách ảnh sản phẩm */
   @IsArray()
@@ -58,27 +59,32 @@ export class CreateProductDto {
   @IsString()
   origin?: string;
 
-  /** 📘 Hướng dẫn sử dụng (user_manual: JSONB) */
+  /** 📘 Hướng dẫn sử dụng */
   @IsOptional()
   @ValidateNested()
   @Type(() => UserManualDto)
-  user_manual?: UserManualDto;
+  userManual?: UserManualDto;
 
   /** ⚠️ Ghi chú / cảnh báo an toàn */
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  caution_notes?: string[];
+  cautionNotes?: string[];
 
-  /** 🔀 Danh sách biến thể sản phẩm (product_variants) */
+  /** 🔀 Danh sách biến thể sản phẩm */
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
-  variants?: CreateProductVariantDto[];
+  variants?: CreateProductVariantDto[] | null;
 
   @IsOptional()
   @ValidateNested()
   @Type(() => InitialReceiptDto)
-  initialReceipt?: InitialReceiptDto;
+  initialReceipt?: InitialReceiptDto | null;
+
+  @IsNumber()
+  price: number | null;
+
+
 }

@@ -35,9 +35,9 @@ export class ProductVariant {
     @Column({ length: 50, nullable: true })
     sku?: string;
 
-    @Index('uq_product_variants_barcode_not_null', { unique: true, where: 'barcode IS NOT NULL' })
-    @Column({ length: 64, nullable: true })
-    barcode?: string;
+    @Column('varchar', { length: 100, nullable: true })
+    barcode?: string | null;
+
 
     @Column({ default: 1 })
     status: number;
@@ -50,10 +50,10 @@ export class ProductVariant {
     @CreateDateColumn({ name: 'created_at' }) createdAt: Date;
     @UpdateDateColumn({ name: 'updated_at' }) updatedAt: Date;
 
-    @OneToOne(() => ProductVariantInventory, (inventory) => inventory.variant, { cascade: true })
-    inventory: ProductVariantInventory;
+    @OneToOne(() => ProductVariantInventory, (inventory) => inventory.variant, { cascade: true, onDelete: 'CASCADE' })
+    inventory: ProductVariantInventory[];
 
-    @OneToMany(() => ProductVariantPrice, (price) => price.variant, { cascade: true })
+    @OneToMany(() => ProductVariantPrice, (price) => price.variant, { cascade: true, onDelete: "CASCADE", })
     prices: ProductVariantPrice[];
 
     @OneToMany(() => ProductVariantRentalPrice, (rp) => rp.variant, { cascade: true })

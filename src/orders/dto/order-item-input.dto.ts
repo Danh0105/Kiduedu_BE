@@ -1,27 +1,25 @@
-// src/orders/dto/order-item-input.dto.ts
-import {
-    IsInt,
-    IsNumber,
-    Min,
-    IsOptional,
-    IsObject,
-} from 'class-validator';
+import { IsInt, IsNumber, IsObject, IsOptional, Min, ValidateIf } from 'class-validator';
 
 export class OrderItemInputDto {
+    @ValidateIf(o => o.variantId !== null)
     @IsInt()
-    @Min(1)
-    variantId: number;
+    variantId?: number | null;
+
+    @ValidateIf(o => o.productId !== null)
+    @IsInt()
+    productId?: number | null;
 
     @IsInt()
     @Min(1)
     quantity: number;
 
-    // Nếu bạn không muốn client gửi giá, có thể bỏ field này
+    @IsOptional()
     @IsNumber()
     @Min(0)
-    pricePerUnit: number;
+    pricePerUnit?: number;
 
     @IsOptional()
     @IsObject()
     attributes?: Record<string, any>;
+
 }

@@ -25,16 +25,26 @@ export class OrderItem {
   @JoinColumn({ name: 'order_id' })
   order: Order;
 
-  @Index()
-  @Column({ name: 'variant_id', type: 'int' })
-  variantId: number;
+  @Column({ name: 'variant_id', type: 'int', nullable: true })
+  variantId: number | null;
+
+  @Column({ name: 'product_id', type: 'int', nullable: true })
+  productId: number | null;
+
 
   @ManyToOne(() => ProductVariant, (variant) => variant.orderItems, {
     onDelete: 'RESTRICT',
     onUpdate: 'CASCADE',
   })
+  @ManyToOne(() => ProductVariant, (variant) => variant.orderItems, {
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+    nullable: true, // cho phép null
+  })
   @JoinColumn({ name: 'variant_id', referencedColumnName: 'variantId' })
-  variant: ProductVariant;
+  variant: ProductVariant | null; // kiểu union với null
+
+
 
   @Column({ type: 'int', default: 1 })
   quantity: number;
