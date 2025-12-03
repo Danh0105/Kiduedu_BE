@@ -54,7 +54,7 @@ export class InventoryReceiptItem {
 
     // ------------ Relations (tuỳ chọn, nếu muốn dùng) ------------
     @ManyToOne(() => InventoryReceipt, (r) => r.items, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'receipt_id', referencedColumnName: 'receiptId' })
+    @JoinColumn({ name: 'receipt_id' })
     receipt: InventoryReceipt;
 
     // Nếu có entity ProductVariant thì mở comment

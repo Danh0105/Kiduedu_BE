@@ -15,7 +15,7 @@ export class ProductVariantInventoryService {
      * 🔍 Lấy thông tin tồn kho của 1 variant
      */
     async getInventory(variantId: number) {
-        const inv = await this.repo.findOne({ where: { variant_id: variantId } });
+        const inv = await this.repo.findOne({ where: { variantId: variantId } });
         if (!inv) {
             throw new NotFoundException(`Inventory not found for variant ${variantId}`);
         }
@@ -27,12 +27,12 @@ export class ProductVariantInventoryService {
      * Nếu chưa tồn tại → tự động tạo mới
      */
     async updateInventory(variantId: number, dto: UpdateVariantInventoryDto) {
-        let inventory = await this.repo.findOne({ where: { variant_id: variantId } });
+        let inventory = await this.repo.findOne({ where: { variantId: variantId } });
 
         if (!inventory) {
             // Nếu chưa có bản ghi tồn kho thì tạo mới
             inventory = this.repo.create({
-                variant_id: variantId,
+                variantId: variantId,
                 stock_quantity: dto.stock_quantity ?? 0,
                 safety_stock: dto.safety_stock ?? 0,
                 updated_at: new Date(),

@@ -1,25 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('banners')
 export class Banner {
   @PrimaryGeneratedColumn()
-  banner_id: number;
+  id: number;
 
-  @Column({ length: 100 })
-  title: string;
+  @Column({ type: 'text', name: 'image_url' })
+  imageUrl: string;
 
-  @Column({ length: 255 })
-  image_url: string;
+  @Column({ default: true, name: 'is_active' })
+  isActive: boolean;
 
-  @Column({ length: 255, nullable: true })
-  link_url: string;
+  @CreateDateColumn()
+  created_at: Date;
 
-  @Column({ type: 'enum', enum: ['homepage_slider', 'category_top', 'sidebar'] })
-  position: 'homepage_slider' | 'category_top' | 'sidebar';
-
-  @Column({ type: 'int', default: 0 })
-  display_order: number;
-
-  @Column({ default: true })
-  is_active: boolean;
+  @UpdateDateColumn()
+  updated_at: Date;
 }

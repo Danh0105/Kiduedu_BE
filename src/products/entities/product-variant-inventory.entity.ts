@@ -10,9 +10,9 @@ import { ProductVariant } from './product-variant.entity';
 
 @Entity('product_variant_inventory')
 export class ProductVariantInventory {
-  // Dùng luôn variant_id làm PK
+  // Dùng luôn variantId làm PK
   @PrimaryColumn({ name: 'variant_id', type: 'int' })
-  variant_id: number;
+  variantId: number;
 
   @Column({ name: 'stock_quantity', type: 'int', default: 0 })
   stock_quantity: number;
@@ -26,6 +26,7 @@ export class ProductVariantInventory {
   @OneToOne(() => ProductVariant, (variant) => variant.inventory, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'variant_id', referencedColumnName: 'variantId' })
+  @OneToOne(() => ProductVariant, (variant) => variant.inventory)
+  @JoinColumn({ name: "variant_id" })
   variant: ProductVariant;
 }

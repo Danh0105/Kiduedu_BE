@@ -543,7 +543,7 @@ export class ProductService {
         'images',
         'variants',
         'variants.prices',
-        'variants.inventory',
+        'variants.inventory'
       ],
       order: { productId: 'DESC' },
       skip: (page - 1) * limit,

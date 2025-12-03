@@ -33,6 +33,10 @@ import { InventoryReceipt } from './entities/inventory-receipt.entity';
 import { InventoryReceiptItem } from './entities/inventory-receipt-item.entity';
 import { Supplier } from './entities/supplier.entity';
 import { UploadService } from 'src/upload/upload.service';
+import { SupplierService } from './services/supplier.service';
+import { SupplierController } from './controllers/supplier.controller';
+import { InventoryController } from './controllers/inventory.controller';
+import { InventoryService } from './services/inventory.service';
 @Module({
   imports: [
     AuthModule,
@@ -58,8 +62,8 @@ import { UploadService } from 'src/upload/upload.service';
     ]),
 
   ],
-  controllers: [ProductController, ProductVariantsController, ProductVariantPricesController, ProductVariantOptionsController, ProductRentalsController, RentalOrdersController],
-  providers: [UploadService, ProductService, ProductVariantsService, ProductVariantOptionsService, ProductVariantPricesService, ProductRentalsService, RentalOrdersService],
+  controllers: [InventoryController, SupplierController, ProductController, ProductVariantsController, ProductVariantPricesController, ProductVariantOptionsController, ProductRentalsController, RentalOrdersController],
+  providers: [InventoryService, SupplierService, UploadService, ProductService, ProductVariantsService, ProductVariantOptionsService, ProductVariantPricesService, ProductRentalsService, RentalOrdersService],
   exports: [ProductVariantsService, ProductVariantPricesService, ProductVariantOptionsService],
 })
 export class ProductModule { }

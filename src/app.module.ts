@@ -18,6 +18,7 @@ import { PolicyModule } from './policy/policy.module';
 import { CustomerServiceModule } from './customer-service/customer-service.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { OrdersModule } from './orders/order.module';
+import { BannerModule } from './banners/banner.module';
 
 @Module({
   imports: [
@@ -79,7 +80,8 @@ import { OrdersModule } from './orders/order.module';
     SearchModule,
     PolicyModule,
     CustomerServiceModule,
-    OrdersModule
+    OrdersModule,
+    BannerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
