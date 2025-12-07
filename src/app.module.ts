@@ -31,6 +31,9 @@ import { BannerModule } from './banners/banner.module';
         POSTGRES_USER: Joi.string().required(),
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DB: Joi.string().required(),
+        REDIS_HOST: Joi.string().default('127.0.0.1'),
+        REDIS_PORT: Joi.number().default(6379),
+
         NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
       }),
     }),
