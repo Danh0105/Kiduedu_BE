@@ -26,7 +26,7 @@ export class InventoryService {
     ) { }
 
     /* ======================================================
-            SINH MÃ PHIẾU TỰ ĐỘNG  (PNK0001 / PXK0001)
+                AUTO GENERATE RECEIPT CODE (PNK / PXK)
     ====================================================== */
     async generateCode(type: string) {
         const prefix = type === "import" ? "PNK" : "PXK";
@@ -42,50 +42,53 @@ export class InventoryService {
     }
 
     /* ======================================================
-                     CẬP NHẬT TỒN KHO
-        quantity > 0  => nhập kho
-        quantity < 0  => xuất kho
+                     UPDATE STOCK (SAFE METHOD)
+        quantity > 0  => import
+        quantity < 0  => export
     ====================================================== */
     async adjustStock(variantId: number, quantity: number) {
         let row = await this.inventoryRepo.findOne({
-            where: { variantId: variantId },
+            where: { variantId },
         });
 
-        // Nếu chưa có biến thể trong tồn kho => tạo mới
         if (!row) {
             row = this.inventoryRepo.create({
-                variantId: variantId,
+                variantId,
                 stock_quantity: 0,
                 safety_stock: 0,
             });
         }
 
-        const newQty = row.stock_quantity + quantity;
+        const newStock = row.stock_quantity + quantity;
+        const newSafety = row.safety_stock + quantity;
 
-        if (newQty < 0) {
+        if (newStock < 0 || newSafety < 0) {
             throw new BadRequestException(
-                `Biến thể ${variantId} không đủ tồn kho để xuất!`
+                `Biến thể ${variantId} không đủ tồn kho hoặc safety stock!`
             );
         }
 
-        row.stock_quantity = newQty;
+        row.stock_quantity = newStock;
+        row.safety_stock = newSafety;
         row.updated_at = new Date();
 
         await this.inventoryRepo.save(row);
     }
 
     /* ======================================================
-                     TẠO PHIẾU NHẬP / XUẤT
+                     CREATE IMPORT / EXPORT RECEIPT
     ====================================================== */
     async create(dto: any) {
         const { type, date, supplierId, note, referenceNo, items } = dto;
 
         if (!items || items.length === 0) {
-            throw new BadRequestException("Phiếu phải có ít nhất 1 sản phẩm.");
+            throw new BadRequestException(
+                "Phiếu phải có ít nhất 1 sản phẩm."
+            );
         }
 
         return this.dataSource.transaction(async (manager) => {
-            // 1) Tạo phiếu nhập / xuất
+            // 1) Create receipt
             const receipt = manager.create(InventoryReceipt, {
                 receiptCode: await this.generateCode(type),
                 receiptDate: date,
@@ -99,63 +102,92 @@ export class InventoryService {
 
             let totalAmount = 0;
 
-            // 2) Lưu từng item
+            // 2) Save each item
             for (const item of items) {
                 const quantity = Number(item.quantity);
                 const unitCost = Number(item.unitCost || 0);
                 const lineTotal = quantity * unitCost;
 
                 const record = manager.create(InventoryReceiptItem, {
-                    receiptId: savedReceipt.receiptId,   // 👈 QUAN TRỌNG: CÓ receiptId
+                    receiptId: savedReceipt.receiptId,
                     variantId: item.variantId,
                     quantity: quantity,
                     unitCost: unitCost,
                     lineTotal: lineTotal,
                 });
 
-                await manager.save(record); // 👈 BẮT BUỘC: lưu item độc lập
+                await manager.save(record);
 
                 totalAmount += lineTotal;
 
-                // 3) Cập nhật tồn kho
-                await manager.query(
-                    `
-                INSERT INTO product_variant_inventory (variant_id, stock_quantity, safety_stock)
-                VALUES ($1, $2, 0)
-                ON CONFLICT (variant_id)
-                DO UPDATE SET stock_quantity =
-                    product_variant_inventory.stock_quantity + EXCLUDED.stock_quantity
-                `,
-                    [
-                        item.variantId,
-                        type === "import" ? quantity : -quantity,
-                    ]
+                /* ==========================================
+                    3) Update Stock + Safety Stock
+                ========================================== */
+
+                // Xác định số tăng/giảm
+                const delta = type === "import" ? quantity : -quantity;
+
+                // Kiểm tra tồn kho trước khi cập nhật
+                const current = await manager.query(
+                    `SELECT stock_quantity, safety_stock 
+                        FROM product_variant_inventory 
+                        WHERE variant_id = $1`,
+                    [item.variantId]
                 );
 
-                // Nếu là xuất kho → kiểm tra tồn kho âm
-                if (type === "export") {
-                    const check = await manager.query(
-                        `SELECT stock_quantity FROM product_variant_inventory WHERE variant_id = $1`,
-                        [item.variantId]
-                    );
+                // ===============================
+                // CASE 1 - CHƯA TỪNG CÓ TỒN KHO
+                // ===============================
+                if (!current.length) {
+                    if (delta < 0) {
+                        throw new BadRequestException(
+                            `Biến thể ${item.variantId} chưa có tồn kho, không thể xuất!`
+                        );
+                    }
 
-                    if (!check.length || Number(check[0].stock_quantity) < 0) {
+                    // Nhập kho lần đầu
+                    await manager.query(
+                        `
+                        INSERT INTO product_variant_inventory 
+                            (variant_id, stock_quantity, safety_stock)
+                        VALUES ($1, $2, $2)
+                        `,
+                        [item.variantId, delta]
+                    );
+                }
+                // ===============================
+                // CASE 2 - ĐÃ CÓ TỒN KHO
+                // ===============================
+                else {
+                    const newStock = Number(current[0].stock_quantity) + delta;
+                    const newSafety = Number(current[0].safety_stock) + delta;
+
+                    if (newStock < 0 || newSafety < 0) {
                         throw new BadRequestException(
                             `Biến thể ${item.variantId} không đủ tồn kho để xuất!`
                         );
                     }
+
+                    await manager.query(
+                        `
+                        UPDATE product_variant_inventory
+                        SET stock_quantity = $2,
+                            safety_stock   = $3
+                        WHERE variant_id = $1
+                        `,
+                        [item.variantId, newStock, newSafety]
+                    );
                 }
             }
 
-            // 4) Cập nhật tổng tiền vào phiếu
+            // 5) Update total amount
             savedReceipt.totalAmount = totalAmount;
             return manager.save(savedReceipt);
         });
     }
 
-
     /* ======================================================
-                        LẤY DANH SÁCH PHIẾU
+                          LIST RECEIPTS
     ====================================================== */
     async findAll() {
         return this.receiptRepo.find({
@@ -165,7 +197,7 @@ export class InventoryService {
     }
 
     /* ======================================================
-                        LẤY CHI TIẾT PHIẾU
+                          RECEIPT DETAIL
     ====================================================== */
     async findOne(id: number) {
         const data = await this.receiptRepo.findOne({
@@ -173,22 +205,23 @@ export class InventoryService {
             relations: ["items", "supplier"],
         });
 
-        if (!data) throw new NotFoundException("Không tìm thấy phiếu kho!");
+        if (!data) {
+            throw new NotFoundException("Không tìm thấy phiếu kho!");
+        }
 
         return data;
     }
 
     /* ======================================================
-                       XOÁ PHIẾU (ROLLBACK TỒN)
+                         DELETE RECEIPT + ROLLBACK STOCK
     ====================================================== */
     async remove(id: number) {
         const receipt = await this.findOne(id);
 
         // Rollback tồn kho
         for (const item of receipt.items) {
-
             await this.adjustStock(
-                Number(item.variantId),
+                item.variantId as number,
                 receipt.supplierId ? -item.quantity : item.quantity
             );
         }

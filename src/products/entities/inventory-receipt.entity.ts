@@ -31,7 +31,7 @@ export class InventoryReceipt {
     @Column('int', {
         name: 'supplier_id',
     })
-    supplierId: number; // sau này có thể @ManyToOne Supplier
+    supplierId: number;
 
     @Column('varchar', {
         name: 'reference_no',
