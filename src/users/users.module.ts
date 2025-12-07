@@ -7,8 +7,19 @@ import { Address } from './entities/address.entity';
 import { UserProfileIndividual } from './entities/user_profile_individual.entity';
 import { UserProfileBusiness } from './entities/user_profile_business.entity';
 import { UsersController } from './users.controller';
+import { EmailQueueModule } from 'src/email/email.queue.module';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Cart, Address, UserProfileBusiness, UserProfileIndividual])],
+  imports: [TypeOrmModule.forFeature([
+    User,
+    Cart,
+    Address,
+    UserProfileBusiness,
+    UserProfileIndividual,
+  ]),
+    EmailQueueModule,
+  ],
+
   providers: [UsersService],
   exports: [UsersService],
   controllers: [UsersController],

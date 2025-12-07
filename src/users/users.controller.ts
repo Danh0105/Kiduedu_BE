@@ -1,7 +1,8 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Get, Query, Res } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CustomerType } from './entities/user.entity';
+import type { Response } from 'express';
 
 @Controller('users')
 export class UsersController {
@@ -42,4 +43,21 @@ export class UsersController {
       customerType: CustomerType.INDIVIDUAL,
     });
   }
+
+  @Get("verify-email")
+  async verifyEmail(@Query("token") token: string, @Res() res: Response) {
+    try {
+      await this.usersService.verifyEmail(token);
+      return res.redirect("http://localhost:3001/verify-success");
+    } catch (err) {
+      return res.redirect("http://localhost:3001/verify-failed");
+    }
+  }
+
+  @Get("check-verify")
+  async checkVerify(@Query("email") email: string) {
+    const user = await this.usersService.findByEmail(email);
+    return { verified: user?.emailVerified ?? false };
+  }
+
 }

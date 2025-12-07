@@ -12,6 +12,7 @@ import { Address } from './address.entity';
 import { UserProfileIndividual } from './user_profile_individual.entity';
 import { UserProfileBusiness } from './user_profile_business.entity';
 
+
 export enum CustomerType {
   INDIVIDUAL = 'individual',
   BUSINESS = 'business',
@@ -70,4 +71,19 @@ export class User {
   // Hồ sơ doanh nghiệp
   @OneToOne(() => UserProfileBusiness, profile => profile.user)
   profile_business: UserProfileBusiness;
+
+  @Column({
+    name: 'email_verified',
+    type: 'boolean',
+    default: false,
+  })
+  emailVerified: boolean;
+
+  @Column({
+    name: 'verify_token',
+    type: 'text',
+    nullable: true,
+  })
+  verifyToken: string | null;
+
 }

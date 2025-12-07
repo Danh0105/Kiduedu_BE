@@ -1,5 +1,5 @@
 import { In } from 'typeorm';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Redirect } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { User, CustomerType } from './entities/user.entity';
@@ -10,8 +10,12 @@ import { UserProfileBusiness } from './entities/user_profile_business.entity';
 import { Order } from 'src/orders/entities/order.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
 import { ProductVariant } from 'src/products/entities/product-variant.entity';
-import { Product } from 'src/products/entities/product.entity'; // ✅ Import thêm Product
+import { Product } from 'src/products/entities/product.entity';
 import { AddressDto, CreateUserDto } from './dto/create-user.dto';
+import { EmailQueueService } from 'src/email/email.queue.service';
+
+import * as crypto from 'crypto';
+import * as nodemailer from 'nodemailer';
 
 /* ================= Helpers ================= */
 
@@ -23,18 +27,20 @@ function slugifyUsername(s: string) {
     .toLowerCase()
     .slice(0, 40);
 }
+
 type AnyPrice = {
   price?: number | string;
   amount?: number | string;
   startAt?: string | Date;
   endAt?: string | Date | null;
-  // ... các trường khác
 };
+
 async function generateUniqueUsername(mgr: any, desiredRaw: string): Promise<string> {
   const desired = slugifyUsername(desiredRaw || 'user');
   let candidate = desired || 'user';
   let n = 0;
   const repo = mgr.getRepository(User);
+
   while (true) {
     const exists = await repo.exist({ where: { username: candidate } });
     if (!exists) return candidate;
@@ -42,36 +48,86 @@ async function generateUniqueUsername(mgr: any, desiredRaw: string): Promise<str
     candidate = `${desired}-${n}`.slice(0, 50);
   }
 }
+
 function pickActivePrice(prices?: AnyPrice[]): number | undefined {
   if (!prices || prices.length === 0) return undefined;
-  const now = new Date();
-  const toDate = (d?: string | Date | null) => (typeof d === 'string' ? new Date(d) : d ?? undefined);
 
-  // Tìm giá đang active
+  const now = new Date();
+  const toDate = (d?: string | Date | null) =>
+    typeof d === 'string' ? new Date(d) : d ?? undefined;
+
   const active = prices.find((p) => {
     const start = toDate((p as any).startAt ?? (p as any).start_at);
     const end = toDate((p as any).endAt ?? (p as any).end_at);
     return (!start || start <= now) && (!end || end >= now);
   });
 
-  const toNum = (v: any) => (v === undefined || v === null || v === '' ? undefined : Number(v));
-  const val = (p?: AnyPrice) => (p ? toNum(p.price) ?? toNum((p as any).amount) : undefined);
+  const toNum = (v: any) =>
+    v === undefined || v === null || v === '' ? undefined : Number(v);
+  const val = (p?: AnyPrice) =>
+    p ? toNum(p.price) ?? toNum((p as any).amount) : undefined;
 
   return val(active) ?? val(prices[0]);
 }
+
+/* ================= SERVICE ================= */
+
 @Injectable()
 export class UsersService {
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
-    // Các repository khác nếu cần dùng trực tiếp bên ngoài transaction...
+
+    private readonly emailQueueService: EmailQueueService,
   ) { }
+
+  /* ==== EMAIL VERIFY HELPERS (đúng vị trí) ==== */
+
+  private generateVerifyToken() {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  private async sendVerificationEmail(email: string, token: string) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    });
+
+    const link = `https://your-domain.com/auth/verify-email?token=${token}`;
+
+    await transporter.sendMail({
+      from: 'IchiSkill <no-reply@ichiskill.vn>',
+      to: email,
+      subject: 'Xác thực email tài khoản',
+      html: `
+        <p>Nhấn vào nút bên dưới để xác thực tài khoản:</p>
+        <a style="
+          padding: 10px 16px;
+          background: #4CAF50;
+          color: white;
+          text-decoration: none;
+          border-radius: 6px;
+        " href="${link}">Xác thực email</a>
+        <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
+      `,
+    });
+  }
+
+  /* ================= Core ================= */
 
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  async createUser(data: CreateUserDto): Promise<{ user: User; order: Order; items: OrderItem[] }> {
+  async createUser(data: CreateUserDto): Promise<{
+    user: User;
+    order: Order | null;
+    items: OrderItem[] | null;
+    message?: string;
+  }> {
     if (!data?.email) throw new BadRequestException('Email is required');
     if (!Array.isArray(data.items) || data.items.length === 0) {
       throw new BadRequestException('Items must not be empty');
@@ -80,7 +136,6 @@ export class UsersService {
     try {
       return await this.createUserAndOrderTransactional(data);
     } catch (e: any) {
-      // Race-condition: 23505 là mã lỗi Unique violation trong Postgres
       if (e?.code === '23505') {
         return await this.createOrderForExistingEmail(data);
       }
@@ -88,7 +143,6 @@ export class UsersService {
     }
   }
 
-  /* ============ Core transactional path ============ */
   private normalizeStr(v?: string | null): string {
     return (v ?? '').trim().toLowerCase();
   }
@@ -104,43 +158,64 @@ export class UsersService {
     );
   }
 
-  // Hàm helper để xử lý/tạo Address
   private async resolveAddress(mgr: EntityManager, user: User, addressDto?: AddressDto): Promise<Address | null> {
     if (!addressDto) return null;
 
     const existingAddresses = user.addresses ?? [];
-    // Nếu user mới được tạo, existingAddresses sẽ rỗng (trừ khi load relations sau khi save)
-    // Logic ở đây: Check xem user đã có địa chỉ này chưa
     const existed = existingAddresses.find((addr) => this.isSameAddress(addressDto, addr));
 
-    if (existed) {
-      return existed;
-    }
+    if (existed) return existed;
 
-    // Tạo mới
-    return await mgr.save(
-      mgr.create(Address, { ...addressDto, user: user }),
-    );
+    return await mgr.save(mgr.create(Address, { ...addressDto, user }));
   }
+
+  /* ========== CREATE USER + ORDER TRANSACTION ========== */
 
   private async createUserAndOrderTransactional(data: CreateUserDto) {
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
+
     try {
       const mgr = qr.manager;
       const email = data.email.trim().toLowerCase();
       const customerType = data.customerType ?? CustomerType.INDIVIDUAL;
 
-      // 1) Lấy hoặc tạo User
+      /* =============================
+        1) KIỂM TRA USER ĐÃ TỒN TẠI?
+      ============================== */
       let savedUser = await mgr.getRepository(User).findOne({
         where: { email },
         relations: ['cart', 'addresses'],
       });
 
+      /* 🚨 Nếu user đã tồn tại nhưng CHƯA xác thực → chặn tạo đơn + gửi lại email */
+      if (savedUser && !savedUser.emailVerified) {
+        // Gửi lại email xác thực
+        const newVerifyToken = this.generateVerifyToken();
+        savedUser.verifyToken = newVerifyToken;
+        await mgr.save(savedUser);
+
+        await this.emailQueueService.addVerifyEmailJob(email, newVerifyToken);
+
+        await qr.commitTransaction();
+
+        return {
+          user: savedUser,
+          order: null,
+          items: [],
+          message: "Email chưa được xác thực. Vui lòng kiểm tra email để xác thực tài khoản trước khi đặt hàng."
+        };
+      }
+
+      /* ===============================
+        2) USER CHƯA TỒN TẠI → TẠO MỚI
+      =============================== */
       if (!savedUser) {
-        const desiredUsername = data.username || (data.fullName ?? '').trim() || email.split('@')[0] || 'user';
+        const desiredUsername = data.username || (data.fullName ?? '').trim() || email.split('@')[0];
         const username = await generateUniqueUsername(mgr, desiredUsername);
+
+        const verifyToken = this.generateVerifyToken();
 
         savedUser = await mgr.save(
           mgr.create(User, {
@@ -148,11 +223,19 @@ export class UsersService {
             email,
             role: data.role ?? 'customer',
             customer_type: customerType,
+            emailVerified: false,
+            verifyToken,
           }),
         );
 
+        // Gửi mail verify
+        await this.emailQueueService.addVerifyEmailJob(email, verifyToken);
+        console.log("JOB SENT → EMAIL:", email, verifyToken);
+
+        // Tạo giỏ hàng
         await mgr.save(mgr.create(Cart, { user: savedUser }));
 
+        // Tạo profile
         if (customerType === CustomerType.BUSINESS) {
           await mgr.save(
             mgr.create(UserProfileBusiness, {
@@ -171,16 +254,32 @@ export class UsersService {
             }),
           );
         }
+
+        /* 🚨 User mới → CHẶN tạo đơn cho đến khi xác thực */
+        await qr.commitTransaction();
+
+        return {
+          user: savedUser,
+          order: null,
+          items: [],
+          message: "Vui lòng kiểm tra email và xác thực tài khoản trước khi tạo đơn hàng."
+        };
       }
 
-      // 2) Xử lý Address
-      // Nếu user mới tạo, relations 'addresses' là undefined/empty.
-      // Nếu user cũ, đã load ở trên.
+      /* ===============================
+        3) USER ĐÃ TỒN TẠI & ĐÃ VERIFY
+           → ĐƯỢC TẠO ĐƠN HÀNG
+      =============================== */
+
       if (!savedUser.addresses) savedUser.addresses = [];
       const selectedAddress = await this.resolveAddress(mgr, savedUser, data.address);
 
-      // 3) Gọi hàm chung để xử lý Items và tạo Order (Hỗ trợ Product + Variant)
       const { order, items } = await this._createOrderProcess(mgr, savedUser, data.items, selectedAddress);
+      await this.emailQueueService.addOrderSuccessNotifyJob({
+        orderId: order.orderId,
+        totalAmount: order.totalAmount,
+        user: savedUser
+      });
 
       await qr.commitTransaction();
       return { user: savedUser, order, items };
@@ -193,26 +292,25 @@ export class UsersService {
     }
   }
 
-  /* ===== Retry path when email UNIQUE is hit (race) ===== */
+
+  /* ========== EXISTING USER RETRY PATH ========== */
+
   private async createOrderForExistingEmail(data: CreateUserDto) {
-    // Load user lại
     const user = await this.usersRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
-      relations: ['addresses'] // Load address để check trùng
+      relations: ['addresses'],
     });
 
-    if (!user) throw new BadRequestException('Email conflict but user not found. Retry later.');
+    if (!user) throw new BadRequestException('Email conflict but user not found.');
 
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
+
     try {
       const mgr = qr.manager;
-
-      // Xử lý Address cho user cũ (nếu họ gửi kèm địa chỉ mới)
       const selectedAddress = await this.resolveAddress(mgr, user, data.address);
 
-      // Gọi hàm chung
       const { order, items } = await this._createOrderProcess(mgr, user, data.items, selectedAddress);
 
       await qr.commitTransaction();
@@ -225,34 +323,24 @@ export class UsersService {
     }
   }
 
-  /**
-   * --------------------------------------------------------
-   * Logic cốt lõi: Map Items (Product/Variant) -> Tính tiền -> Lưu Order
-   * --------------------------------------------------------
-   */
+  /* ========== CREATE ORDER LOGIC ========== */
+
   private async _createOrderProcess(
     mgr: EntityManager,
     user: User,
     itemsDto: any[],
     shippingAddress: Address | null,
   ) {
-    // 1. Tách danh sách ID cần query
-    const variantIds = itemsDto
-      .filter((i) => i.variantId)
-      .map((i) => i.variantId);
+    const variantIds = itemsDto.filter((i) => i.variantId).map((i) => i.variantId);
+    const productIds = itemsDto.filter((i) => i.productId && !i.variantId).map((i) => i.productId);
 
-    const productIds = itemsDto
-      .filter((i) => i.productId && !i.variantId) // Chỉ lấy productId nếu không có variantId
-      .map((i) => i.productId);
-
-    // 2. Query dữ liệu từ DB
     let variants: ProductVariant[] = [];
     let products: Product[] = [];
 
     if (variantIds.length > 0) {
       variants = await mgr.getRepository(ProductVariant).find({
         where: { variantId: In(variantIds) },
-        relations: ['product', 'prices'], // Load prices để fallback nếu cần
+        relations: ['product', 'prices'],
       });
     }
 
@@ -262,107 +350,98 @@ export class UsersService {
       });
     }
 
-
-    // 3. Validate: Đảm bảo ID gửi lên tồn tại trong DB
     const foundVariantIds = new Set(variants.map((v) => v.variantId));
     const missingVariants = variantIds.filter((id) => !foundVariantIds.has(id));
+
     if (missingVariants.length > 0) {
       throw new BadRequestException(`Variant(s) not found: ${missingVariants.join(', ')}`);
     }
 
     const foundProductIds = new Set(products.map((p) => p.productId));
     const missingProducts = productIds.filter((id) => !foundProductIds.has(id));
+
     if (missingProducts.length > 0) {
       throw new BadRequestException(`Product(s) not found: ${missingProducts.join(', ')}`);
     }
 
-    // 4. Map DTO sang Entity OrderItem
     const itemsEntities = itemsDto.map((i) => {
       let variantEntity: ProductVariant | null = null;
       let productIdValue: number | null = null;
-      let dbPrice: number | undefined = undefined;
+      let dbPrice: number | undefined;
 
-      // --- Case A: Item có Variant ---
       if (i.variantId) {
         variantEntity = variants.find((v) => v.variantId === i.variantId) || null;
-        if (!variantEntity) throw new BadRequestException(`Variant ${i.variantId} not found`); // Double check
 
-        // Logic: Nếu là Variant, ta lưu relation Variant. 
-        // Có thể lưu thêm productId cha vào cột 'product' nếu muốn (tùy nghiệp vụ), 
-        // ở đây mình sẽ để productIdValue = variantEntity.productId (nếu có) hoặc null.
-        productIdValue = variantEntity.product ? (variantEntity.product as any).productId ?? (variantEntity.product as any).id : null;
+        productIdValue = variantEntity?.product
+          ? (variantEntity.product as any).productId ?? (variantEntity.product as any).id
+          : null;
 
-        // Lấy giá từ variant
         dbPrice = pickActivePrice((variantEntity as any).prices);
-      }
-      // --- Case B: Item chỉ có Product (không Variant) ---
-      else if (i.productId) {
+      } else if (i.productId) {
         const productEntity = products.find((p) => p.productId === i.productId);
-        if (!productEntity) throw new BadRequestException(`Product ${i.productId} not found`);
-
         variantEntity = null;
-        productIdValue = productEntity.productId; // Lưu ID vào cột 'product'
 
-        // Lấy giá từ product
+        productIdValue = productEntity!.productId;
+
         dbPrice = pickActivePrice((productEntity as any).prices);
       }
-      else {
-        throw new BadRequestException(`Item phải có productId hoặc variantId`);
-      }
 
-      // --- Xử lý Giá (Ưu tiên DTO > DB) ---
-      const finalPrice = i.pricePerUnit !== undefined && i.pricePerUnit !== null
-        ? Number(i.pricePerUnit)
-        : Number(dbPrice);
+      const finalPrice =
+        i.pricePerUnit !== undefined ? Number(i.pricePerUnit) : Number(dbPrice);
 
       if (!Number.isFinite(finalPrice)) {
         throw new BadRequestException(
-          `Không xác định được giá cho item (Variant: ${i.variantId}, Product: ${i.productId})`
+          `Không xác định được giá cho item (Variant: ${i.variantId}, Product: ${i.productId})`,
         );
       }
 
-      // --- Tạo Entity ---
-      // Lưu ý: Theo Entity bạn gửi:
-      // 'variant' là Relation -> truyền object Entity
-      // 'product' là Column (int) -> truyền number ID
       return mgr.create(OrderItem, {
-        // order: sẽ gán sau
-        variant: variantEntity, // TypeORM tự map vào cột variant_id
+        variant: variantEntity,
         productId: productIdValue,
         quantity: i.quantity,
         pricePerUnit: finalPrice,
         attributes: i.attributes || {},
-      } as any); // 'as any' để tránh các lỗi type checking quá khắt khe của DeepPartial khi mix relation/column
+      });
     });
 
-    // 5. Tính toán tổng tiền
     const subtotal = itemsEntities.reduce(
       (sum, it) => sum + Number(it.pricePerUnit) * Number(it.quantity),
       0,
     );
-    const shipping_fee = 0;
-    const total = subtotal + shipping_fee;
 
-    // 6. Lưu Order
     const savedOrder = await mgr.save(
       mgr.create(Order, {
-        user: user,
+        user,
         subtotal,
         discountAmount: 0,
-        totalAmount: total,
+        totalAmount: subtotal,
         status: 'Pending',
-        shippingAddress: shippingAddress ?? null,
+        shippingAddress,
       }),
     );
 
-    // 7. Gán Order vào Items và lưu
-    // Vì OrderItem có @ManyToOne Order, ta gán object order vào
-    itemsEntities.forEach((it) => {
-      it.order = savedOrder;
-    });
-
+    itemsEntities.forEach((it) => (it.order = savedOrder));
     const savedItems = await mgr.save(itemsEntities);
 
     return { order: savedOrder, items: savedItems };
+  }
+
+  /* ========= VERIFY EMAIL API ========= */
+
+  async verifyEmail(token: string) {
+    const user = await this.usersRepository.findOne({
+      where: { verifyToken: token },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+    }
+
+    user.emailVerified = true;
+    user.verifyToken = null;
+
+    await this.usersRepository.save(user);
+    return { success: true };
+
   }
 }
