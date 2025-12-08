@@ -6,83 +6,83 @@ import { SettingsService } from '../settings/services/setting-email.service';
 
 @Processor('emailQueue')
 export class EmailQueueProcessor extends WorkerHost {
-    private transporterCache: Transporter | null = null;
+  private transporterCache: Transporter | null = null;
 
-    constructor(
-        private readonly settingsService: SettingsService
-    ) {
-        super();
+  constructor(
+    private readonly settingsService: SettingsService
+  ) {
+    super();
+  }
+
+  /* =================== QUEUE PROCESS =================== */
+
+  async process(job: Job<any>) {
+    console.log("WORKER RECEIVED JOB →", job.name, job.data);
+
+    switch (job.name) {
+      case 'sendVerifyEmail':
+        return this.sendVerifyEmail(job.data.email, job.data.token);
+
+      case "sendOrderSuccessNotify":
+        return this.sendOrderSuccessNotify(job.data);
+    }
+  }
+
+  /* =======================================================
+     CREATE TRANSPORTER (reuse để tránh lỗi overload)
+  ======================================================== */
+
+  private async getTransporter(user: string, pass: string): Promise<Transporter> {
+    if (!this.transporterCache) {
+      this.transporterCache = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: { user, pass }
+      });
+    }
+    return this.transporterCache;
+  }
+
+  /* =======================================================
+                   SEND VERIFY EMAIL
+  ======================================================== */
+
+  private async sendVerifyEmail(email: string, token: string): Promise<SentMessageInfo | void> {
+    const MAIL_USER = await this.settingsService.get("MAIL_USER_SENT");
+    const MAIL_PASS = await this.settingsService.get("MAIL_PASS_SENT");
+
+    if (!MAIL_USER || !MAIL_PASS) {
+      console.error("❌ MAIL_USER / MAIL_PASS thiếu trong DB");
+      return;
     }
 
-    /* =================== QUEUE PROCESS =================== */
+    const transporter = await this.getTransporter(MAIL_USER, MAIL_PASS);
 
-    async process(job: Job<any>) {
-        console.log("WORKER RECEIVED JOB →", job.name, job.data);
+    try {
+      console.log("🔍 Checking SMTP connection...");
+      await transporter.verify();
+      console.log("✅ SMTP READY!");
 
-        switch (job.name) {
-            case 'sendVerifyEmail':
-                return this.sendVerifyEmail(job.data.email, job.data.token);
+      const link = `https://www.kidoedu.edu.vn/users/verify-email?token=${token}`;
 
-            case "sendOrderSuccessNotify":
-                return this.sendOrderSuccessNotify(job.data);
-        }
+      const result = await transporter.sendMail({
+        from: `Kido <${MAIL_USER}>`,
+        to: email,
+        subject: "Xác thực email tài khoản",
+        html: this.buildVerifyEmailHTML(link)
+      });
+
+      console.log("📨 VERIFY EMAIL SENT →", result.accepted);
+      return result;
+
+    } catch (err) {
+      console.error("❌ EMAIL ERROR:", err);
     }
+  }
 
-    /* =======================================================
-       CREATE TRANSPORTER (reuse để tránh lỗi overload)
-    ======================================================== */
-
-    private async getTransporter(user: string, pass: string): Promise<Transporter> {
-        if (!this.transporterCache) {
-            this.transporterCache = nodemailer.createTransport({
-                host: "smtp.gmail.com",
-                port: 465,
-                secure: true,
-                auth: { user, pass }
-            });
-        }
-        return this.transporterCache;
-    }
-
-    /* =======================================================
-                     SEND VERIFY EMAIL
-    ======================================================== */
-
-    private async sendVerifyEmail(email: string, token: string): Promise<SentMessageInfo | void> {
-        const MAIL_USER = await this.settingsService.get("MAIL_USER_SENT");
-        const MAIL_PASS = await this.settingsService.get("MAIL_PASS_SENT");
-
-        if (!MAIL_USER || !MAIL_PASS) {
-            console.error("❌ MAIL_USER / MAIL_PASS thiếu trong DB");
-            return;
-        }
-
-        const transporter = await this.getTransporter(MAIL_USER, MAIL_PASS);
-
-        try {
-            console.log("🔍 Checking SMTP connection...");
-            await transporter.verify();
-            console.log("✅ SMTP READY!");
-
-            const link = `http://localhost:3000/users/verify-email?token=${token}`;
-
-            const result = await transporter.sendMail({
-                from: `IchiSkill <${MAIL_USER}>`,
-                to: email,
-                subject: "Xác thực email tài khoản",
-                html: this.buildVerifyEmailHTML(link)
-            });
-
-            console.log("📨 VERIFY EMAIL SENT →", result.accepted);
-            return result;
-
-        } catch (err) {
-            console.error("❌ EMAIL ERROR:", err);
-        }
-    }
-
-    private buildVerifyEmailHTML(link: string): string {
-        return `
+  private buildVerifyEmailHTML(link: string): string {
+    return `
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;padding:40px 0;">
   <tr>
     <td align="center">
@@ -94,7 +94,7 @@ export class EmailQueueProcessor extends WorkerHost {
           <td style="background:#2de42f4d;padding:20px;text-align:center;">
             <img src="https://www.kidoedu.edu.vn/static/media/Logo.b35816c78d7c3753c12d.png"
                  width="120"
-                 alt="IchiSkill Logo"
+                 alt="Kido Logo"
                  style="display:block;margin:auto;" />
           </td>
         </tr>
@@ -105,7 +105,7 @@ export class EmailQueueProcessor extends WorkerHost {
             <h2 style="color:#0d6efd;margin-top:0;">Xác thực email tài khoản</h2>
 
             <p>Xin chào,</p>
-            <p>Cảm ơn bạn đã đăng ký trên hệ thống IchiSkill.
+            <p>Cảm ơn bạn đã đăng ký trên hệ thống Kido.
             Nhấn vào nút dưới đây để xác thực email.</p>
 
             <div style="text-align:center;margin:30px 0;">
@@ -127,7 +127,7 @@ export class EmailQueueProcessor extends WorkerHost {
 
             <p style="margin-top:30px;">
               Trân trọng,<br/>
-              <strong>Đội ngũ IchiSkill</strong>
+              <strong>Đội ngũ Kido</strong>
             </p>
           </td>
         </tr>
@@ -135,7 +135,7 @@ export class EmailQueueProcessor extends WorkerHost {
         <!-- FOOTER -->
         <tr>
           <td style="background:#f1f3f5;padding:15px;text-align:center;color:#6c757d;font-size:13px;">
-            © ${new Date().getFullYear()} IchiSkill — All rights reserved.
+            © ${new Date().getFullYear()} Kido — All rights reserved.
           </td>
         </tr>
 
@@ -144,24 +144,24 @@ export class EmailQueueProcessor extends WorkerHost {
     </td>
   </tr>
 </table>`;
+  }
+
+  /* =======================================================
+               SEND ADMIN ORDER NOTIFICATION
+  ======================================================== */
+
+  private async sendOrderSuccessNotify(data: any): Promise<SentMessageInfo | void> {
+    const MAIL_USER = await this.settingsService.get("MAIL_USER");
+    const MAIL_PASS = await this.settingsService.get("MAIL_PASS");
+
+    if (!MAIL_USER || !MAIL_PASS) {
+      console.error("❌ MAIL_NOTIFY / MAIL_PASS thiếu trong DB");
+      return;
     }
 
-    /* =======================================================
-                 SEND ADMIN ORDER NOTIFICATION
-    ======================================================== */
+    const transporter = await this.getTransporter(MAIL_USER, MAIL_PASS);
 
-    private async sendOrderSuccessNotify(data: any): Promise<SentMessageInfo | void> {
-        const MAIL_USER = await this.settingsService.get("MAIL_USER");
-        const MAIL_PASS = await this.settingsService.get("MAIL_PASS");
-
-        if (!MAIL_USER || !MAIL_PASS) {
-            console.error("❌ MAIL_NOTIFY / MAIL_PASS thiếu trong DB");
-            return;
-        }
-
-        const transporter = await this.getTransporter(MAIL_USER, MAIL_PASS);
-
-        const html = `
+    const html = `
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:40px 0;font-family:Arial, sans-serif;">
   <tr>
     <td align="center">
@@ -173,7 +173,7 @@ export class EmailQueueProcessor extends WorkerHost {
           <td style="background:#2de42f4d;padding:18px 0;text-align:center;">
             <img src="https://www.kidoedu.edu.vn/static/media/Logo.b35816c78d7c3753c12d.png" 
                  width="120" 
-                 alt="IchiSkill Logo"
+                 alt="Kido Logo"
                  style="display:block;margin:auto;">
           </td>
         </tr>
@@ -183,7 +183,7 @@ export class EmailQueueProcessor extends WorkerHost {
           <td style="padding:30px;text-align:center;">
             <h2 style="color:#333;margin:0;font-size:24px;">📦 Bạn có đơn hàng mới!</h2>
             <p style="color:#666;margin-top:10px;font-size:15px;">
-              Một đơn hàng mới vừa được đặt trên hệ thống IchiSkill.
+              Một đơn hàng mới vừa được đặt trên hệ thống Kido.
             </p>
           </td>
         </tr>
@@ -239,7 +239,7 @@ export class EmailQueueProcessor extends WorkerHost {
         <!-- FOOTER -->
         <tr>
           <td style="background:#f1f3f5;text-align:center;padding:15px;color:#777;font-size:13px;">
-            © ${new Date().getFullYear()} IchiSkill — Hệ thống quản lý & giáo dục công nghệ
+            © ${new Date().getFullYear()} Kido — Hệ thống quản lý & giáo dục công nghệ
           </td>
         </tr>
 
@@ -251,14 +251,14 @@ export class EmailQueueProcessor extends WorkerHost {
 
         `;
 
-        const result = await transporter.sendMail({
-            from: `IchiSkill Shop <${MAIL_USER}>`,
-            to: MAIL_USER,
-            subject: "🔔 Có đơn hàng mới!",
-            html,
-        });
+    const result = await transporter.sendMail({
+      from: `Kido Shop <${MAIL_USER}>`,
+      to: MAIL_USER,
+      subject: "🔔 Có đơn hàng mới!",
+      html,
+    });
 
-        console.log("📨 Order notify email sent →", result.accepted);
-        return result;
-    }
+    console.log("📨 Order notify email sent →", result.accepted);
+    return result;
+  }
 }
