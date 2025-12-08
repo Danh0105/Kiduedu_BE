@@ -64,7 +64,7 @@ export class EmailQueueProcessor extends WorkerHost {
       await transporter.verify();
       console.log("✅ SMTP READY!");
 
-      const link = `https://www.kidoedu.edu.vn/users/verify-email?token=${token}`;
+      const link = `https://www.kidoedu.vn/users/verify-email?token=${token}`;
 
       const result = await transporter.sendMail({
         from: `Kido <${MAIL_USER}>`,
