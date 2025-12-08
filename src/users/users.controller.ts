@@ -48,9 +48,9 @@ export class UsersController {
   async verifyEmail(@Query("token") token: string, @Res() res: Response) {
     try {
       await this.usersService.verifyEmail(token);
-      return res.redirect("http://localhost:3001/verify-success");
+      return res.redirect("https://https://www.kidoedu.edu.vn/verify-success");
     } catch (err) {
-      return res.redirect("http://localhost:3001/verify-failed");
+      return res.redirect("https://https://www.kidoedu.edu.vn/verify-failed");
     }
   }
 
