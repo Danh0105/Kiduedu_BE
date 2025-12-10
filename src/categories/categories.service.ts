@@ -40,7 +40,7 @@ export class CategoriesService {
   /** 📜 Lấy toàn bộ danh mục */
   async findAll(): Promise<Category[]> {
     return this.categoryRepo.find({
-      relations: ['parent', 'children'],
+      relations: ['parent', 'children', 'products'],
       order: { categoryName: 'ASC' },
     });
   }
@@ -82,6 +82,13 @@ export class CategoriesService {
     }
 
     return this.categoryRepo.save(category);
+  }
+  async partialUpdate(id: number, dto: Partial<UpdateCategoryDto>): Promise<Category> {
+    const cat = await this.categoryRepo.findOne({ where: { categoryId: id } });
+    if (!cat) throw new NotFoundException();
+
+    this.categoryRepo.merge(cat, dto);
+    return this.categoryRepo.save(cat);
   }
 
   /** 🗑️ Xoá danh mục */

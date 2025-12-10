@@ -19,6 +19,7 @@ import { CustomerServiceModule } from './customer-service/customer-service.modul
 import { FeedbackModule } from './feedback/feedback.module';
 import { OrdersModule } from './orders/order.module';
 import { BannerModule } from './banners/banner.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { BannerModule } from './banners/banner.module';
     CustomerServiceModule,
     OrdersModule,
     BannerModule,
+    ChatbotModule
   ],
   controllers: [AppController],
   providers: [AppService],

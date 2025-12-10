@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Put, Delete, Patch } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -35,6 +35,16 @@ export class CategoriesController {
   ): Promise<Category> {
     return this.categoriesService.update(+id, dto);
   }
+
+  @Patch(':id')
+  async partialUpdate(
+    @Param('id') id: number,
+    @Body() dto: Partial<UpdateCategoryDto>,
+  ) {
+    return this.categoriesService.partialUpdate(+id, dto);
+  }
+
+
 
   @Public()
   @Delete(':id')
