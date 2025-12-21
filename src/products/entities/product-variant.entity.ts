@@ -8,6 +8,7 @@ import { ProductVariantRentalPrice } from './product-variant-rental-price.entity
 import { ProductVariantRental } from './product-variant-rental.entity';
 import { Product } from './product.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
+import { InventoryReceiptItem } from './inventory-receipt-item.entity';
 
 export type SpecItem = {
     key: string; label: string; value: string;
@@ -42,8 +43,8 @@ export class ProductVariant {
     @Column({ default: 1 })
     status: number;
 
-    @Column({ name: 'attributes', type: 'jsonb', nullable: false, default: () => `'{}'::jsonb` })
-    attributes: Record<string, any>;
+    @Column({ name: 'specs', type: 'jsonb', nullable: false, default: () => `'{}'::jsonb` })
+    specs: Record<string, any>;
 
 
 
@@ -51,7 +52,7 @@ export class ProductVariant {
     @UpdateDateColumn({ name: 'updated_at' }) updatedAt: Date;
 
     @OneToOne(() => ProductVariantInventory, (inventory) => inventory.variant, { cascade: true, onDelete: 'CASCADE' })
-    inventory: ProductVariantInventory[];
+    inventory: ProductVariantInventory;
 
     @OneToMany(() => ProductVariantPrice, (price) => price.variant, { cascade: true, onDelete: "CASCADE", })
     prices: ProductVariantPrice[];
@@ -73,6 +74,9 @@ export class ProductVariant {
     @OneToMany(() => OrderItem, (item) => item.variant)
     orderItems: OrderItem[];
 
-    @Column({ name: 'specs', type: 'jsonb', nullable: false, default: () => `'[]'::jsonb` })
-    specs: SpecItem[];
+    @OneToMany(
+        () => InventoryReceiptItem,
+        (item) => item.variant
+    )
+    receiptItems: InventoryReceiptItem[];
 }

@@ -8,9 +8,9 @@ export class SearchService {
 
   private searchVecExists?: boolean;
 
-  // ------------------------------
-  // Check cột search_vec có tồn tại không (cache 1 lần)
-  // ------------------------------
+  // ============================================================
+  // CHECK search_vec column exists
+  // ============================================================
   private async ensureSearchVecExists(): Promise<boolean> {
     if (this.searchVecExists === undefined) {
       const r = await this.ds.query(`
@@ -28,9 +28,9 @@ export class SearchService {
     return this.searchVecExists!;
   }
 
-  // ------------------------------
-  // Inline search vector khi không có search_vec column
-  // ------------------------------
+  // ============================================================
+  // Inline tsvector generation if search_vec column is missing
+  // ============================================================
   private inlineSearchVec(alias = 'p'): string {
     return `
       setweight(to_tsvector('simple', public.unaccent_imm(coalesce(${alias}.product_name,''))), 'A') ||
@@ -47,14 +47,13 @@ export class SearchService {
     `;
   }
 
-  // ------------------------------
-  // Query chung: SELECT product fields
-  // ------------------------------
+  // ============================================================
+  // BASE PRODUCT SELECT
+  // ============================================================
   private baseProductSelect(): string {
     return `
-    p.product_id AS "productId",
-    p.product_name AS "productName",
-
+      p.product_id AS "productId",
+      p.product_name AS "productName",
 
       (
         SELECT pvpr.price
@@ -77,31 +76,34 @@ export class SearchService {
         BTRIM(REGEXP_REPLACE(COALESCE(p.short_description, ''), '<[^>]+>', ' ', 'g')),
       '') AS "shortDescription",
 
-      img.image_url AS "imageUrl"
+      img.image_url AS "imageUrl",
+
+      p.category_id AS "categoryId",
+      c.category_name AS "categoryName",
+      p.created_at AS "createdAt"
     `;
   }
 
-  // ------------------------------
-  // Query lấy ảnh đại diện sản phẩm
-  // ------------------------------
+  // ============================================================
+  // IMAGE JOIN
+  // ============================================================
   private baseImageJoin(): string {
     return `
       LEFT JOIN LATERAL (
-    SELECT 
-        pi.image_url,
-        pi.is_primary
+        SELECT 
+          pi.image_url,
+          pi.is_primary
         FROM public.product_images pi
         WHERE pi.product_id = p.product_id
         ORDER BY pi.is_primary DESC, pi.image_id ASC
         LIMIT 1
-    ) AS img ON TRUE
-
+      ) AS img ON TRUE
     `;
   }
 
-  // ------------------------------
-  // Query xây cây danh mục
-  // ------------------------------
+  // ============================================================
+  // CATEGORY TREE (recursive)
+  // ============================================================
   private categoryTree(): string {
     return `
       WITH RECURSIVE cat_tree AS (
@@ -114,29 +116,35 @@ export class SearchService {
     `;
   }
 
-  // ============================================================================
-  //  PUBLIC METHOD: SEARCH / FILTER PRODUCTS
-  // ============================================================================
-  async searchProducts(q: string, page = 1, limit = 10, categoryId?: number | null) {
+  // ============================================================
+  // PUBLIC SEARCH METHOD
+  // ============================================================
+  async searchProducts(
+    q: string,
+    page = 1,
+    limit = 10,
+    categoryId?: number | null,
+  ) {
     const term = (q ?? '').trim();
     const offset = Math.max(0, (page - 1) * limit);
 
-    // ------------------------------------------------------------
-    // 1. Không có từ khóa + không có category → trả rỗng
-    // ------------------------------------------------------------
+    // ============================================================
+    // NO SEARCH WORD + NO CATEGORY → RETURN EMPTY
+    // ============================================================
     if (!term && categoryId == null) {
       return { items: [], pagination: { page, limit, total: 0, pages: 0 } };
     }
 
-    // ------------------------------------------------------------
-    // 2. Chỉ lọc category → không search
-    // ------------------------------------------------------------
+    // ============================================================
+    // ONLY CATEGORY FILTER (no keyword)
+    // ============================================================
     if (!term && categoryId != null) {
       const sql = `
         ${this.categoryTree()}
         SELECT
           ${this.baseProductSelect()}
         FROM public.products p
+        LEFT JOIN public.categories c ON c.category_id = p.category_id
         ${this.baseImageJoin()}
         WHERE p.category_id IN (SELECT id FROM cat_tree)
         ORDER BY p.product_id DESC
@@ -147,47 +155,54 @@ export class SearchService {
 
       const totalRes = await this.ds.query(
         `
-        ${this.categoryTree()}
-        SELECT COUNT(*)::int AS count
-        FROM public.products p
-        WHERE p.category_id IN (SELECT id FROM cat_tree);
+          ${this.categoryTree()}
+          SELECT COUNT(*)::int AS count
+          FROM public.products p
+          WHERE p.category_id IN (SELECT id FROM cat_tree);
         `,
-        [categoryId]
+        [categoryId],
       );
 
       const total: number = totalRes?.[0]?.count ?? 0;
       return { items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
     }
 
-    // ------------------------------------------------------------
-    // 3. Search full-text
-    // ------------------------------------------------------------
-    const hasCol = await this.ensureSearchVecExists();
-    const sv = hasCol ? 'p.search_vec' : this.inlineSearchVec('p');
+    // ============================================================
+    // FULL-TEXT SEARCH
+    // ============================================================
+    const hasVec = await this.ensureSearchVecExists();
+    const sv = hasVec ? 'p.search_vec' : this.inlineSearchVec('p');
 
-    const withCatTree = categoryId != null
-      ? `
-        WITH RECURSIVE cat_tree AS (
-          SELECT $4::int AS id
-          UNION ALL
-          SELECT c.category_id
-          FROM public.categories c
-          JOIN cat_tree t ON c.parent_category_id = t.id
-        ), q AS (
-          SELECT public.unaccent_imm($1) AS uq,
-                 websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
-        )
-      `
-      : `
-        WITH q AS (
-          SELECT public.unaccent_imm($1) AS uq,
-                 websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
-        )
-      `;
+    const withCatTree =
+      categoryId != null
+        ? `
+          WITH RECURSIVE cat_tree AS (
+            SELECT $4::int AS id
+            UNION ALL
+            SELECT c.category_id
+            FROM public.categories c
+            JOIN cat_tree t ON c.parent_category_id = t.id
+          ), q AS (
+            SELECT public.unaccent_imm($1) AS uq,
+                   websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
+          )
+        `
+        : `
+          WITH q AS (
+            SELECT public.unaccent_imm($1) AS uq,
+                   websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
+          )
+        `;
 
-    const whereCat = categoryId != null ? `AND p.category_id IN (SELECT id FROM cat_tree)` : ``;
-    const params = categoryId != null ? [term, limit, offset, categoryId] : [term, limit, offset];
+    const whereCat =
+      categoryId != null ? `AND p.category_id IN (SELECT id FROM cat_tree)` : ``;
 
+    const params =
+      categoryId != null ? [term, limit, offset, categoryId] : [term, limit, offset];
+
+    // ============================================================
+    // SEARCH ITEMS
+    // ============================================================
     const items = await this.ds.query(
       `
       ${withCatTree}
@@ -195,16 +210,22 @@ export class SearchService {
         ${this.baseProductSelect()},
         ts_rank_cd(${sv}, q.tsq, 32) AS rank
       FROM public.products p
+      LEFT JOIN public.categories c ON c.category_id = p.category_id
       CROSS JOIN q
       ${this.baseImageJoin()}
       WHERE
         (${sv} @@ q.tsq OR public.unaccent_imm(p.product_name) ILIKE ('%' || q.uq || '%'))
         ${whereCat}
-      ORDER BY rank DESC NULLS LAST, p.product_id
+      ORDER BY rank DESC NULLS LAST, p.product_id DESC
       LIMIT $2 OFFSET $3;
       `,
-      params
+      params,
     );
+
+    // ============================================================
+    // TOTAL COUNT
+    // ============================================================
+    const countParams = categoryId != null ? [term, categoryId] : [term];
 
     const totalRes = await this.ds.query(
       `
@@ -213,16 +234,21 @@ export class SearchService {
                websearch_to_tsquery('simple', public.unaccent_imm($1)) AS tsq
       )
       SELECT COUNT(*)::int AS count
-      FROM public.products p, q
+      FROM public.products p
+      LEFT JOIN public.categories c ON c.category_id = p.category_id,
+      q
       WHERE
         (${sv} @@ q.tsq OR public.unaccent_imm(p.product_name) ILIKE ('%' || q.uq || '%'))
         ${whereCat};
       `,
-      categoryId != null ? [term, categoryId] : [term]
+      countParams,
     );
 
     const total: number = totalRes?.[0]?.count ?? 0;
 
-    return { items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+    return {
+      items,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
   }
 }

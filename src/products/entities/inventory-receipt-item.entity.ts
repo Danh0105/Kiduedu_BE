@@ -6,6 +6,7 @@ import {
     JoinColumn,
 } from 'typeorm';
 import { InventoryReceipt } from './inventory-receipt.entity';
+import { ProductVariant } from './product-variant.entity';
 // import { ProductVariant } from '...'; // nếu sau này có entity cho variant
 
 @Entity('inventory_receipt_items')
@@ -57,8 +58,11 @@ export class InventoryReceiptItem {
     @JoinColumn({ name: 'receipt_id' })
     receipt: InventoryReceipt;
 
-    // Nếu có entity ProductVariant thì mở comment
-    // @ManyToOne(() => ProductVariant, (v) => v.receiptItems)
-    // @JoinColumn({ name: 'variant_id', referencedColumnName: 'variantId' })
-    // variant: ProductVariant;
+    @ManyToOne(() => ProductVariant, (v) => v.receiptItems, {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn({ name: 'variant_id' })
+    variant: ProductVariant;
+
+
 }

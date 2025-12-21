@@ -190,10 +190,37 @@ export class InventoryService {
                           LIST RECEIPTS
     ====================================================== */
     async findAll() {
-        return this.receiptRepo.find({
-            order: { receiptId: "DESC" },
-            relations: ["supplier", "items"],
-        });
+        return this.receiptRepo
+            .createQueryBuilder("r")
+            .leftJoin("r.supplier", "s")
+            .leftJoin("r.items", "i")
+            .leftJoin("i.variant", "v")
+            .leftJoin("v.product", "p")
+
+            .select([
+                // ===== InventoryReceipt =====
+                "r.receiptId",
+                "r.receiptCode",
+                "r.createdAt",
+                "r.totalAmount",
+                "r.note",
+                // ===== Supplier =====
+                "s.supplierId",
+                "s.supplierName",
+
+                // ===== Receipt Items =====
+                "i.quantity",
+                "i.unitCost",
+
+                // ===== Variant =====
+                "v.variantName",
+
+                // ===== Product =====
+                "p.productName",
+            ])
+
+            .orderBy("r.receiptId", "DESC")
+            .getMany();
     }
 
     /* ======================================================

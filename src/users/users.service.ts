@@ -11,7 +11,7 @@ import { Order } from 'src/orders/entities/order.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
 import { ProductVariant } from 'src/products/entities/product-variant.entity';
 import { Product } from 'src/products/entities/product.entity';
-import { AddressDto, CreateUserDto } from './dto/create-user.dto';
+import { AddressDto, CreateUserDto, PaymentMethod } from './dto/create-user.dto';
 import { EmailQueueService } from 'src/email/email.queue.service';
 
 import * as crypto from 'crypto';
@@ -274,7 +274,7 @@ export class UsersService {
       if (!savedUser.addresses) savedUser.addresses = [];
       const selectedAddress = await this.resolveAddress(mgr, savedUser, data.address);
 
-      const { order, items } = await this._createOrderProcess(mgr, savedUser, data.items, selectedAddress);
+      const { order, items } = await this._createOrderProcess(mgr, savedUser, data.items, selectedAddress, data.paymentMethod);
       await this.emailQueueService.addOrderSuccessNotifyJob({
         orderId: order.orderId,
         totalAmount: order.totalAmount,
@@ -311,7 +311,7 @@ export class UsersService {
       const mgr = qr.manager;
       const selectedAddress = await this.resolveAddress(mgr, user, data.address);
 
-      const { order, items } = await this._createOrderProcess(mgr, user, data.items, selectedAddress);
+      const { order, items } = await this._createOrderProcess(mgr, user, data.items, selectedAddress, data.paymentMethod);
 
       await qr.commitTransaction();
       return { user, order, items };
@@ -330,84 +330,67 @@ export class UsersService {
     user: User,
     itemsDto: any[],
     shippingAddress: Address | null,
+    paymentMethod: PaymentMethod
   ) {
-    const variantIds = itemsDto.filter((i) => i.variantId).map((i) => i.variantId);
-    const productIds = itemsDto.filter((i) => i.productId && !i.variantId).map((i) => i.productId);
+    /* ===============================
+       1) LOAD VARIANTS
+    =============================== */
 
-    let variants: ProductVariant[] = [];
-    let products: Product[] = [];
+    const variantIds = itemsDto.map((i) => i.variantId);
 
-    if (variantIds.length > 0) {
-      variants = await mgr.getRepository(ProductVariant).find({
-        where: { variantId: In(variantIds) },
-        relations: ['product', 'prices'],
-      });
-    }
-
-    if (productIds.length > 0) {
-      products = await mgr.getRepository(Product).find({
-        where: { productId: In(productIds) },
-      });
-    }
+    const variants = await mgr.getRepository(ProductVariant).find({
+      where: { variantId: In(variantIds) },
+      relations: ['product', 'prices'],
+    });
 
     const foundVariantIds = new Set(variants.map((v) => v.variantId));
-    const missingVariants = variantIds.filter((id) => !foundVariantIds.has(id));
+    const missing = variantIds.filter((id) => !foundVariantIds.has(id));
 
-    if (missingVariants.length > 0) {
-      throw new BadRequestException(`Variant(s) not found: ${missingVariants.join(', ')}`);
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Variant(s) not found: ${missing.join(', ')}`,
+      );
     }
 
-    const foundProductIds = new Set(products.map((p) => p.productId));
-    const missingProducts = productIds.filter((id) => !foundProductIds.has(id));
-
-    if (missingProducts.length > 0) {
-      throw new BadRequestException(`Product(s) not found: ${missingProducts.join(', ')}`);
-    }
+    /* ===============================
+       2) MAP ORDER ITEMS
+    =============================== */
 
     const itemsEntities = itemsDto.map((i) => {
-      let variantEntity: ProductVariant | null = null;
-      let productIdValue: number | null = null;
-      let dbPrice: number | undefined;
+      const variant = variants.find((v) => v.variantId === i.variantId)!;
 
-      if (i.variantId) {
-        variantEntity = variants.find((v) => v.variantId === i.variantId) || null;
-
-        productIdValue = variantEntity?.product
-          ? (variantEntity.product as any).productId ?? (variantEntity.product as any).id
-          : null;
-
-        dbPrice = pickActivePrice((variantEntity as any).prices);
-      } else if (i.productId) {
-        const productEntity = products.find((p) => p.productId === i.productId);
-        variantEntity = null;
-
-        productIdValue = productEntity!.productId;
-
-        dbPrice = pickActivePrice((productEntity as any).prices);
-      }
-
+      const dbPrice = pickActivePrice((variant as any).prices);
       const finalPrice =
-        i.pricePerUnit !== undefined ? Number(i.pricePerUnit) : Number(dbPrice);
+        i.pricePerUnit !== undefined
+          ? Number(i.pricePerUnit)
+          : Number(dbPrice);
 
       if (!Number.isFinite(finalPrice)) {
         throw new BadRequestException(
-          `Không xác định được giá cho item (Variant: ${i.variantId}, Product: ${i.productId})`,
+          `Không xác định được giá cho variant ${i.variantId}`,
         );
       }
 
       return mgr.create(OrderItem, {
-        variant: variantEntity,
-        productId: productIdValue,
+        variant,
         quantity: i.quantity,
         pricePerUnit: finalPrice,
         attributes: i.attributes || {},
       });
     });
 
+    /* ===============================
+       3) CALC TOTAL
+    =============================== */
+
     const subtotal = itemsEntities.reduce(
       (sum, it) => sum + Number(it.pricePerUnit) * Number(it.quantity),
       0,
     );
+
+    /* ===============================
+       4) CREATE ORDER (🔥 CẬP NHẬT)
+    =============================== */
 
     const savedOrder = await mgr.save(
       mgr.create(Order, {
@@ -416,6 +399,9 @@ export class UsersService {
         discountAmount: 0,
         totalAmount: subtotal,
         status: 'Pending',
+        paymentMethod,
+        paymentStatus: 'PENDING_PAYMENT',
+
         shippingAddress,
       }),
     );

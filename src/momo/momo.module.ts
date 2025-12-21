@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MomoService } from './momo.service';
 import { MomoController } from './momo.controller';
+import { Order } from 'src/orders/entities/order.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
-  imports: [], // nếu dùng ConfigService thì import ConfigModule ở đây
+  imports: [TypeOrmModule.forFeature([Order])],
   controllers: [MomoController],
   providers: [MomoService],
-  exports: [MomoService], // nếu muốn dùng ở module khác
+  exports: [MomoService],
 })
 export class MomoModule { }

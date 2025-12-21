@@ -5,10 +5,6 @@ export class OrderItemInputDto {
     @IsInt()
     variantId?: number | null;
 
-    @ValidateIf(o => o.productId !== null)
-    @IsInt()
-    productId?: number | null;
-
     @IsInt()
     @Min(1)
     quantity: number;

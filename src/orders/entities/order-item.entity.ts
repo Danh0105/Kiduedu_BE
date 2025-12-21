@@ -20,29 +20,24 @@ export class OrderItem {
 
   @ManyToOne(() => Order, (order) => order.items, {
     onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'order_id' })
   order: Order;
 
+
   @Column({ name: 'variant_id', type: 'int', nullable: true })
   variantId: number | null;
 
-  @Column({ name: 'product_id', type: 'int', nullable: true })
-  productId: number | null;
 
 
   @ManyToOne(() => ProductVariant, (variant) => variant.orderItems, {
-    onDelete: 'RESTRICT',
+    nullable: true,
+    onDelete: 'RESTRICT',   // không cho xóa variant khi đã có order
     onUpdate: 'CASCADE',
-  })
-  @ManyToOne(() => ProductVariant, (variant) => variant.orderItems, {
-    onDelete: 'RESTRICT',
-    onUpdate: 'CASCADE',
-    nullable: true, // cho phép null
   })
   @JoinColumn({ name: 'variant_id', referencedColumnName: 'variantId' })
-  variant: ProductVariant | null; // kiểu union với null
+  variant: ProductVariant | null;
+
 
 
 

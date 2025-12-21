@@ -91,12 +91,34 @@ export class Order {
   @JoinColumn({ name: 'promotion_id' })
   promotion?: Promotion | null;
 
-  @OneToMany(() => OrderItem, (item) => item.order)
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: ['remove'], })
   items: OrderItem[];
+
   @ManyToOne(() => Address, { nullable: true, eager: true })
   @JoinColumn({ name: 'shipping_address_id' })
   shippingAddress?: Address | null;
 
   @Column({ name: 'shipping_address_id', type: 'int', nullable: true })
   shippingAddressId: number | null;
+
+  @Column({
+    name: 'payment_method',
+    type: 'varchar',
+    length: 30,
+    default: 'cod',
+  })
+  paymentMethod: 'cod' | 'momo' | 'vnpay';
+
+  @Column({
+    name: 'payment_status',
+    type: 'varchar',
+    length: 30,
+    default: 'PENDING_PAYMENT',
+  })
+  paymentStatus:
+    | 'PENDING_PAYMENT'
+    | 'PAID'
+    | 'FAILED'
+    | 'CANCELLED'
+    | 'EXPIRED';
 }

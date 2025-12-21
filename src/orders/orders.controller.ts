@@ -5,8 +5,9 @@ import {
   Body,
   Get,
   Param,
-  Put,
   Delete,
+  Patch,
+  NotFoundException,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
@@ -34,11 +35,24 @@ export class OrdersController {
     return this.ordersService.findOne(+id);
   }
 
-  @Put(':id/status')
-  async updateStatus(
-    @Param('id') id: number,
+  // 🔥🔥🔥 API MỚI – LẤY ORDER THEO orderCode (CHO MOMO)
+  @Public()
+  @Get('by-code/:code')
+  async findByCode(@Param('code') code: number): Promise<Order> {
+    const order = await this.ordersService.findByCode(code);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return order;
+  }
+
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id') id: string,
     @Body() body: UpdateOrderStatusDto,
-  ): Promise<Order> {
+  ) {
     return this.ordersService.updateStatus(+id, body.status);
   }
 

@@ -1,7 +1,8 @@
-// src/orders/dto/update-order-status.dto.ts
-import { IsString } from 'class-validator';
+// dto/update-order-status.dto.ts
+import { IsEnum } from 'class-validator';
+import { OrderStatus } from '../order-status.enum';
 
 export class UpdateOrderStatusDto {
-    @IsString()
-    status: string;
+    @IsEnum(OrderStatus)
+    status: OrderStatus;
 }

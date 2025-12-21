@@ -16,6 +16,18 @@ import { Transform, Type } from 'class-transformer';
 import { CustomerType } from '../entities/user.entity';
 import { Column } from 'typeorm';
 
+export enum PaymentMethod {
+  MOMO = 'momo',
+  COD = 'cod',
+  BANK = 'vnpay',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING_PAYMENT',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+}
+
 export class AddressDto {
   @IsString()
   full_name: string;
@@ -57,9 +69,7 @@ export class OrderItemInputDto {
   @Min(0)
   pricePerUnit?: number;
 
-  @IsOptional()
-  @IsObject()
-  attributes?: Record<string, any>;
+
 
 }
 
@@ -109,4 +119,11 @@ export class CreateUserDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemInputDto)
   items: OrderItemInputDto[];
+
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod;
+
+  @IsOptional()
+  @IsEnum(PaymentStatus)
+  paymentStatus?: PaymentStatus;
 }

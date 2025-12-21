@@ -87,7 +87,7 @@ export class ProductVariantsService {
 
             return {
                 ...v,
-                attributes: v.attributes ?? {},
+                attributes: v.specs ?? {},
                 specs: normalizedSpecs, // <-- đảm bảo luôn có mảng specs hợp lệ
             };
         });
@@ -190,7 +190,7 @@ export class ProductVariantsService {
 
         return {
             ...variant,
-            attributes: variant.attributes ?? {},
+            attributes: variant.specs ?? {},
             specs: variantSpecs.length > 0 ? variantSpecs : productSpecsFallback,
             currentPrice: price ? Number(price.price) : null,
             currentPriceType: price?.price_type ?? null,
@@ -203,7 +203,6 @@ export class ProductVariantsService {
         const entity = this.variantsRepo.create({
             ...dto,
             status: dto.status ?? 1,
-            specs: dto.specs ?? [],
         });
         return this.variantsRepo.save(entity);
     }

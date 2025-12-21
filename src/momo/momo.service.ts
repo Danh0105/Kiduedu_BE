@@ -2,33 +2,44 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as crypto from 'crypto';
+import { Order } from '../orders/entities/order.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { number } from 'joi';
 
 @Injectable()
 export class MomoService {
+
   private partnerCode: string;
   private accessKey: string;
   private secretKey: string;
   private endpoint: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @InjectRepository(Order)
+    private readonly orderRepo: Repository<Order>,
+  ) {
     this.partnerCode = this.configService.get<string>('MOMO_PARTNER_CODE', '');
     this.accessKey = this.configService.get<string>('MOMO_ACCESS_KEY', '');
     this.secretKey = this.configService.get<string>('MOMO_SECRET_KEY', '');
     this.endpoint = 'https://test-payment.momo.vn/v2/gateway/api/create';
+
   }
 
-  async createPayment(amount: number, orderId: string) {
+  async createPayment(amount: number, orderId: number) {
     const requestId = Date.now().toString();
     const orderInfo = 'Thanh toán thử nghiệm';
-    const redirectUrl = 'http://localhost:3000/invoice';
-    const ipnUrl = 'http://localhost:3000/payment-notify';
+    const redirectUrl = 'http://localhost:3001/payment-result';
+    const ipnUrl = 'http://localhost:3000/momo/payment-notify';
     const requestType = 'captureWallet';
 
-    // Nếu client truyền orderId thì dùng, không thì tự generate
-    const finalOrderId = orderId || `order_${requestId}`;
+    const momoOrderId = `${orderId}_${requestId}`;
 
     const rawSignature =
-      `accessKey=${this.accessKey}&amount=${amount}&extraData=&ipnUrl=${ipnUrl}&orderId=${finalOrderId}&orderInfo=${orderInfo}&partnerCode=${this.partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+      `accessKey=${this.accessKey}&amount=${amount}&extraData=&ipnUrl=${ipnUrl}` +
+      `&orderId=${momoOrderId}&orderInfo=${orderInfo}&partnerCode=${this.partnerCode}` +
+      `&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
 
     const signature = crypto
       .createHmac('sha256', this.secretKey)
@@ -40,43 +51,43 @@ export class MomoService {
       accessKey: this.accessKey,
       requestId,
       amount,
-      orderId: finalOrderId,
+      orderId: momoOrderId,
       orderInfo,
       redirectUrl,
       ipnUrl,
       requestType,
       extraData: '',
+      lang: 'vi',
       signature,
     };
 
-    const https = require('https');
-    const response = await axios.post(this.endpoint, requestBody, {
-      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-    });
-
+    const response = await axios.post(this.endpoint, requestBody);
     return response.data;
   }
 
+
   async handlePaymentNotify(body: any) {
     const {
-      partnerCode,
       orderId,
-      requestId,
+      resultCode,
+      signature,
       amount,
+      partnerCode,
+      requestId,
       orderInfo,
       orderType,
       transId,
-      resultCode,
       message,
       payType,
       responseTime,
       extraData,
-      signature,
     } = body;
 
-    // ✅ Verify chữ ký để đảm bảo callback từ MoMo là hợp lệ
     const rawSignature =
-      `amount=${amount}&extraData=${extraData}&message=${message}&orderId=${orderId}&orderInfo=${orderInfo}&orderType=${orderType}&partnerCode=${partnerCode}&payType=${payType}&requestId=${requestId}&responseTime=${responseTime}&resultCode=${resultCode}&transId=${transId}`;
+      `amount=${amount}&extraData=${extraData}&message=${message}` +
+      `&orderId=${orderId}&orderInfo=${orderInfo}&orderType=${orderType}` +
+      `&partnerCode=${partnerCode}&payType=${payType}&requestId=${requestId}` +
+      `&responseTime=${responseTime}&resultCode=${resultCode}&transId=${transId}`;
 
     const expectedSignature = crypto
       .createHmac('sha256', this.secretKey)
@@ -87,29 +98,32 @@ export class MomoService {
       return { resultCode: 99, message: 'Invalid signature' };
     }
 
-    // ✅ Giải mã extraData (chi tiết sản phẩm)
-    let products = [];
-    if (extraData) {
-      try {
-        products = JSON.parse(Buffer.from(extraData, 'base64').toString('utf8'));
-      } catch (e) {
-        products = [];
-      }
+    // 🔥 CHUYỂN orderId → number
+    const orderIdNum = Number(orderId);
+
+    if (!Number.isFinite(orderIdNum)) {
+      return { resultCode: 99, message: 'Invalid orderId' };
     }
 
-    // ✅ Lưu kết quả thanh toán vào DB (giả lập)
     if (resultCode === 0) {
-      console.log('Thanh toán thành công:', { orderId, amount, products });
-      // TODO: Update order status = "PAID" trong DB
+      await this.orderRepo.update(
+        { orderId: orderIdNum },
+        {
+          paymentStatus: 'PAID',
+          status: 'Confirmed',
+        }
+      );
     } else {
-      console.log('Thanh toán thất bại:', { orderId, message });
-      // TODO: Update order status = "FAILED" trong DB
+      await this.orderRepo.update(
+        { orderId: orderIdNum },
+        { paymentStatus: 'FAILED' }
+      );
     }
 
-    // ✅ MoMo yêu cầu luôn trả JSON response với `resultCode = 0`
     return {
       resultCode: 0,
       message: 'Confirm Success',
     };
   }
+
 }
