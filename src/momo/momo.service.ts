@@ -29,9 +29,10 @@ export class MomoService {
 
   async createPayment(amount: number, orderId: number) {
     const requestId = Date.now().toString();
-    const orderInfo = 'Thanh toán thử nghiệm';
-    const redirectUrl = 'http://localhost:3001/payment-result';
-    const ipnUrl = 'http://localhost:3000/momo/payment-notify';
+    const orderInfo = 'Thanh toan thu nghiem';
+    const redirectUrl = 'https://kidoedu.vn/payment-result';
+    const ipnUrl = 'https://api.kidoedu.vn/momo/payment-notify';
+
     const requestType = 'captureWallet';
 
     const momoOrderId = `${orderId}_${requestId}`;
@@ -99,7 +100,7 @@ export class MomoService {
     }
 
     // 🔥 CHUYỂN orderId → number
-    const orderIdNum = Number(orderId);
+    const orderIdNum = Number(orderId.split('_')[0]);
 
     if (!Number.isFinite(orderIdNum)) {
       return { resultCode: 99, message: 'Invalid orderId' };
