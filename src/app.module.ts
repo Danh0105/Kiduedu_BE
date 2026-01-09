@@ -21,7 +21,6 @@ import { OrdersModule } from './orders/order.module';
 import { BannerModule } from './banners/banner.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { VnpayModule } from './vnpay/vnpay.module';
-import { In } from 'typeorm';
 import { InqBillModule } from './viettinbank/inq-bill/inq-bill.module';
 import { NotifyBillModule } from './viettinbank/notify-bill/notify-bill.module';
 
