@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as crypto from 'crypto';
@@ -28,19 +28,35 @@ export class MomoService {
   }
 
   async createPayment(amount: number, orderId: number) {
+    if (!Number.isInteger(orderId)) {
+      throw new BadRequestException('Invalid orderId');
+    }
+
     const requestId = Date.now().toString();
-    const orderInfo = 'Thanh toan thu nghiem';
-    const redirectUrl = 'https://kidoedu.vn/payment-result';
-    const ipnUrl = 'https://api.kidoedu.vn/momo/payment-notify';
+    const orderInfo = 'Thanh toán thử nghiệm';
+
+    // FE nhận redirect
+    const redirectUrl = 'http://localhost:3001/payment-result';
+
+    // BE nhận IPN
+    const ipnUrl = 'https://4cd35a7ea14c.ngrok-free.app/momo/payment-notify';
 
     const requestType = 'captureWallet';
 
+    // 👉 orderId MoMo (string)
     const momoOrderId = `${orderId}_${requestId}`;
 
     const rawSignature =
-      `accessKey=${this.accessKey}&amount=${amount}&extraData=&ipnUrl=${ipnUrl}` +
-      `&orderId=${momoOrderId}&orderInfo=${orderInfo}&partnerCode=${this.partnerCode}` +
-      `&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+      `accessKey=${this.accessKey}` +
+      `&amount=${amount}` +
+      `&extraData=` +
+      `&ipnUrl=${ipnUrl}` +
+      `&orderId=${momoOrderId}` +
+      `&orderInfo=${orderInfo}` +
+      `&partnerCode=${this.partnerCode}` +
+      `&redirectUrl=${redirectUrl}` +
+      `&requestId=${requestId}` +
+      `&requestType=${requestType}`;
 
     const signature = crypto
       .createHmac('sha256', this.secretKey)
@@ -66,65 +82,40 @@ export class MomoService {
     return response.data;
   }
 
-
+  /* =========================================================
+     IPN / WEBHOOK
+     ========================================================= */
   async handlePaymentNotify(body: any) {
-    const {
-      orderId,
-      resultCode,
-      signature,
-      amount,
-      partnerCode,
-      requestId,
-      orderInfo,
-      orderType,
-      transId,
-      message,
-      payType,
-      responseTime,
-      extraData,
-    } = body;
+    console.log('📩 IPN BODY:', body);
 
-    const rawSignature =
-      `amount=${amount}&extraData=${extraData}&message=${message}` +
-      `&orderId=${orderId}&orderInfo=${orderInfo}&orderType=${orderType}` +
-      `&partnerCode=${partnerCode}&payType=${payType}&requestId=${requestId}` +
-      `&responseTime=${responseTime}&resultCode=${resultCode}&transId=${transId}`;
+    const { orderId, resultCode } = body;
 
-    const expectedSignature = crypto
-      .createHmac('sha256', this.secretKey)
-      .update(rawSignature)
-      .digest('hex');
+    const realOrderId = Number(orderId.split('_')[0]);
+    console.log('realOrderId', realOrderId);
 
-    if (expectedSignature !== signature) {
-      return { resultCode: 99, message: 'Invalid signature' };
+    const order = await this.orderRepo.findOne({
+      where: { orderId: realOrderId },
+    });
+
+    if (!order) {
+      return { resultCode: 99, message: 'Order not found' };
     }
 
-    // 🔥 CHUYỂN orderId → number
-    const orderIdNum = Number(orderId.split('_')[0]);
-
-    if (!Number.isFinite(orderIdNum)) {
-      return { resultCode: 99, message: 'Invalid orderId' };
+    // idempotent
+    if (order.paymentStatus === 'Paid') {
+      return { resultCode: 0, message: 'Already processed' };
     }
 
     if (resultCode === 0) {
-      await this.orderRepo.update(
-        { orderId: orderIdNum },
-        {
-          paymentStatus: 'PAID',
-          status: 'Confirmed',
-        }
-      );
+      order.paymentStatus = 'Paid';
+      order.status = 'Confirmed';
     } else {
-      await this.orderRepo.update(
-        { orderId: orderIdNum },
-        { paymentStatus: 'FAILED' }
-      );
+      order.paymentStatus = 'Failed';
     }
 
-    return {
-      resultCode: 0,
-      message: 'Confirm Success',
-    };
+    await this.orderRepo.save(order);
+
+    return { resultCode: 0, message: 'OK' };
   }
 
 }

@@ -107,18 +107,18 @@ export class Order {
     length: 30,
     default: 'cod',
   })
-  paymentMethod: 'cod' | 'momo' | 'vnpay';
+  paymentMethod: 'cod' | 'momo' | 'vnpay' | 'vietqr';
 
   @Column({
     name: 'payment_status',
     type: 'varchar',
     length: 30,
-    default: 'PENDING_PAYMENT',
+    default: 'Pending',
   })
   paymentStatus:
-    | 'PENDING_PAYMENT'
-    | 'PAID'
-    | 'FAILED'
-    | 'CANCELLED'
-    | 'EXPIRED';
+    | 'Pending'
+    | 'Paid'
+    | 'Failed'
+    | 'Cancelled'
+    | 'Expired';
 }

@@ -8,6 +8,9 @@ import { UserProfileIndividual } from './entities/user_profile_individual.entity
 import { UserProfileBusiness } from './entities/user_profile_business.entity';
 import { UsersController } from './users.controller';
 import { EmailQueueModule } from 'src/email/email.queue.module';
+import { Role } from '../role/entities/role.entity';
+import { RolesModule } from 'src/role/roles.module';
+import { UserPermission } from './entities/user-permission.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([
@@ -16,8 +19,10 @@ import { EmailQueueModule } from 'src/email/email.queue.module';
     Address,
     UserProfileBusiness,
     UserProfileIndividual,
+    UserPermission,
   ]),
     EmailQueueModule,
+    RolesModule
   ],
 
   providers: [UsersService],

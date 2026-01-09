@@ -5,6 +5,8 @@ import {
     Param,
     Body,
     Delete,
+    Patch,
+    Put,
 } from "@nestjs/common";
 import { InventoryService } from "../services/inventory.service";
 
@@ -35,4 +37,14 @@ export class InventoryController {
     remove(@Param("id") id: string) {
         return this.service.remove(Number(id));
     }
+    @Patch(':id')
+    update(
+        @Param('id') id: number,
+        @Body() dto: any
+    ) {
+        return this.service.update(+id, dto);
+    }
+
+
+
 }

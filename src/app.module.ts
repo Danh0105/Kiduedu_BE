@@ -20,6 +20,10 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { OrdersModule } from './orders/order.module';
 import { BannerModule } from './banners/banner.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
+import { VnpayModule } from './vnpay/vnpay.module';
+import { In } from 'typeorm';
+import { InqBillModule } from './viettinbank/inq-bill/inq-bill.module';
+import { NotifyBillModule } from './viettinbank/notify-bill/notify-bill.module';
 
 @Module({
   imports: [
@@ -81,12 +85,15 @@ import { ChatbotModule } from './chatbot/chatbot.module';
     StatisticsModule,
     FeedbackModule,
     MomoModule,
+    VnpayModule,
+    InqBillModule,
     SearchModule,
     PolicyModule,
     CustomerServiceModule,
     OrdersModule,
     BannerModule,
-    ChatbotModule
+    ChatbotModule,
+    NotifyBillModule,
   ],
   controllers: [AppController],
   providers: [AppService],

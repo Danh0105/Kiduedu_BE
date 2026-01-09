@@ -13,6 +13,7 @@ export class MomoController {
   }
   @Post('payment-notify')
   async paymentNotify(@Body() body: any) {
+    console.log('🔥 IPN HIT CONTROLLER:', body);
     return this.momoService.handlePaymentNotify(body);
   }
 }

@@ -204,24 +204,28 @@ export class InventoryService {
                 "r.createdAt",
                 "r.totalAmount",
                 "r.note",
+
                 // ===== Supplier =====
                 "s.supplierId",
                 "s.supplierName",
 
-                // ===== Receipt Items =====
+                // ===== Receipt Item =====
+                "i.variantId",
                 "i.quantity",
                 "i.unitCost",
 
                 // ===== Variant =====
+                "v.variantId",
                 "v.variantName",
 
                 // ===== Product =====
+                "p.productId",
                 "p.productName",
             ])
-
             .orderBy("r.receiptId", "DESC")
             .getMany();
     }
+
 
     /* ======================================================
                           RECEIPT DETAIL
@@ -258,4 +262,79 @@ export class InventoryService {
 
         return { message: "Đã xoá phiếu và phục hồi tồn kho" };
     }
+    /* ======================================================
+                    UPDATE RECEIPT
+====================================================== */
+    async update(id: number, dto: any) {
+        const { type, date, supplierId, note, referenceNo, items } = dto;
+
+        if (!items || !items.length) {
+            throw new BadRequestException("Phiếu phải có ít nhất 1 sản phẩm.");
+        }
+
+        return this.dataSource.transaction(async (manager) => {
+            // 1️⃣ Lấy phiếu cũ + items
+            const oldReceipt = await manager.findOne(InventoryReceipt, {
+                where: { receiptId: id },
+                relations: ["items"],
+            });
+
+            if (!oldReceipt) {
+                throw new NotFoundException("Không tìm thấy phiếu kho!");
+            }
+
+            // 2️⃣ ROLLBACK tồn kho theo phiếu cũ
+            for (const oldItem of oldReceipt.items) {
+                const delta =
+                    oldReceipt.supplierId
+                        ? -oldItem.quantity   // import → rollback trừ
+                        : oldItem.quantity;   // export → rollback cộng
+
+                await this.adjustStock(oldItem.variantId as number, delta);
+            }
+
+            // 3️⃣ Xoá item cũ
+            await manager.delete(InventoryReceiptItem, {
+                receiptId: id,
+            });
+
+            // 4️⃣ Update thông tin phiếu
+            oldReceipt.receiptDate = date;
+            oldReceipt.supplierId = type === "import" ? supplierId : null;
+            oldReceipt.referenceNo = referenceNo || null;
+            oldReceipt.note = note || null;
+
+            await manager.save(oldReceipt);
+
+            let totalAmount = 0;
+
+            // 5️⃣ Ghi item mới + cập nhật tồn kho
+            for (const item of items) {
+                const quantity = Number(item.quantity);
+                const unitCost = Number(item.unitCost || 0);
+                const lineTotal = quantity * unitCost;
+
+                await manager.save(
+                    manager.create(InventoryReceiptItem, {
+                        receiptId: id,
+                        variantId: item.variantId,
+                        quantity,
+                        unitCost,
+                        lineTotal,
+                    })
+                );
+
+                totalAmount += lineTotal;
+
+                const delta = type === "import" ? quantity : -quantity;
+
+                await this.adjustStock(item.variantId, delta);
+            }
+
+            // 6️⃣ Update total
+            oldReceipt.totalAmount = totalAmount;
+            return manager.save(oldReceipt);
+        });
+    }
+
 }

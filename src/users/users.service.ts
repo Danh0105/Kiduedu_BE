@@ -1,5 +1,5 @@
-import { In } from 'typeorm';
-import { Injectable, BadRequestException, Redirect } from '@nestjs/common';
+import { In, Not } from 'typeorm';
+import { Injectable, BadRequestException, Redirect, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { User, CustomerType } from './entities/user.entity';
@@ -10,12 +10,15 @@ import { UserProfileBusiness } from './entities/user_profile_business.entity';
 import { Order } from 'src/orders/entities/order.entity';
 import { OrderItem } from 'src/orders/entities/order-item.entity';
 import { ProductVariant } from 'src/products/entities/product-variant.entity';
-import { Product } from 'src/products/entities/product.entity';
 import { AddressDto, CreateUserDto, PaymentMethod } from './dto/create-user.dto';
 import { EmailQueueService } from 'src/email/email.queue.service';
-
+import * as bcrypt from 'bcryptjs';
+import { UserPermission } from './entities/user-permission.entity';
 import * as crypto from 'crypto';
 import * as nodemailer from 'nodemailer';
+import { Role } from 'src/role/entities/role.entity';
+import { CreateUserAdminDto } from './dto/create-user-admin';
+import { Permission } from '../permission/entities/permission.entity';
 
 /* ================= Helpers ================= */
 
@@ -77,7 +80,11 @@ export class UsersService {
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
-
+    @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
+    @InjectRepository(Permission)
+    private readonly permissionRepo: Repository<Permission>,
+    @InjectRepository(UserPermission)
+    private readonly userPermissionRepo: Repository<UserPermission>,
     private readonly emailQueueService: EmailQueueService,
   ) { }
 
@@ -119,7 +126,14 @@ export class UsersService {
   /* ================= Core ================= */
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.findOne({
+      where: { email },
+      relations: {
+        role: {
+          permissions: true,
+        },
+      },
+    });
   }
 
   async createUser(data: CreateUserDto): Promise<{
@@ -190,23 +204,23 @@ export class UsersService {
       });
 
       /* 🚨 Nếu user đã tồn tại nhưng CHƯA xác thực → chặn tạo đơn + gửi lại email */
-      if (savedUser && !savedUser.emailVerified) {
-        // Gửi lại email xác thực
-        const newVerifyToken = this.generateVerifyToken();
-        savedUser.verifyToken = newVerifyToken;
-        await mgr.save(savedUser);
-
-        await this.emailQueueService.addVerifyEmailJob(email, newVerifyToken);
-
-        await qr.commitTransaction();
-
-        return {
-          user: savedUser,
-          order: null,
-          items: [],
-          message: "Email chưa được xác thực. Vui lòng kiểm tra email để xác thực tài khoản trước khi đặt hàng."
-        };
-      }
+      /*   if (savedUser && !savedUser.emailVerified) {
+          // Gửi lại email xác thực
+          const newVerifyToken = this.generateVerifyToken();
+          savedUser.verifyToken = newVerifyToken;
+          await mgr.save(savedUser);
+  
+          await this.emailQueueService.addVerifyEmailJob(email, newVerifyToken);
+  
+          await qr.commitTransaction();
+  
+          return {
+            user: savedUser,
+            order: null,
+            items: [],
+            message: "Email chưa được xác thực. Vui lòng kiểm tra email để xác thực tài khoản trước khi đặt hàng."
+          };
+        } */
 
       /* ===============================
         2) USER CHƯA TỒN TẠI → TẠO MỚI
@@ -221,7 +235,7 @@ export class UsersService {
           mgr.create(User, {
             username,
             email,
-            role: data.role ?? 'customer',
+            role: { id: 3 },
             customer_type: customerType,
             emailVerified: false,
             verifyToken,
@@ -229,8 +243,8 @@ export class UsersService {
         );
 
         // Gửi mail verify
-        await this.emailQueueService.addVerifyEmailJob(email, verifyToken);
-        console.log("JOB SENT → EMAIL:", email, verifyToken);
+        /*   await this.emailQueueService.addVerifyEmailJob(email, verifyToken);
+          console.log("JOB SENT → EMAIL:", email, verifyToken); */
 
         // Tạo giỏ hàng
         await mgr.save(mgr.create(Cart, { user: savedUser }));
@@ -400,7 +414,7 @@ export class UsersService {
         totalAmount: subtotal,
         status: 'Pending',
         paymentMethod,
-        paymentStatus: 'PENDING_PAYMENT',
+        paymentStatus: 'Pending',
 
         shippingAddress,
       }),
@@ -414,7 +428,7 @@ export class UsersService {
 
   /* ========= VERIFY EMAIL API ========= */
 
-  async verifyEmail(token: string) {
+  /* async verifyEmail(token: string) {
     const user = await this.usersRepository.findOne({
       where: { verifyToken: token },
     });
@@ -429,5 +443,187 @@ export class UsersService {
     await this.usersRepository.save(user);
     return { success: true };
 
+  } */
+  async findAllPaginated(
+    page = 1,
+    limit = 10,
+    keyword?: string,
+  ) {
+    const qb = this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .select([
+        'user.user_id',
+        'user.username',
+        'user.email',
+        'user.customer_type',
+        'user.emailVerified',
+        'user.created_at',
+        'role.id',
+        'role.name',
+      ])
+      .where('user.user_id != :excludedId', { excludedId: 1 })
+      .andWhere('role.name != :customerRole', { customerRole: 'CUSTOMER' })
+      .orderBy('user.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+
+    if (keyword) {
+      qb.andWhere(
+        '(user.username LIKE :keyword OR user.email LIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
+    }
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
+
+  async createAdmin(dto: CreateUserAdminDto) {
+    const role = await this.roleRepository.findOne({
+      where: { id: dto.id },
+    });
+
+    if (!role) {
+      throw new BadRequestException('Vai trò không tồn tại');
+    }
+
+    const user = this.usersRepository.create({
+      username: dto.name,
+      email: dto.email,
+      password_hash: await bcrypt.hash(dto.password, 10),
+      role: { id: role.id },
+    });
+
+    return this.usersRepository.save(user);
+  }
+  async deleteUserByAdmin(userId: number, adminId: number) {
+    if (userId === adminId) {
+      throw new ForbiddenException('Không thể tự xóa chính mình');
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { user_id: userId },
+      relations: ['role'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    // 🔒 (Tuỳ chọn) Chỉ cho xóa ADMIN & STAFF
+    if (![1, 2].includes(user.role.id)) {
+      throw new BadRequestException('Không được phép xóa tài khoản USER');
+    }
+
+    await this.usersRepository.remove(user);
+
+    return {
+      message: 'Xóa tài khoản thành công',
+      user_id: userId,
+    };
+  }
+  async getEffectivePermissions(userId: number) {
+    const user = await this.usersRepository.findOne({
+      where: { user_id: userId },
+      relations: [
+        'role',
+        'role.permissions',
+        'permissionOverrides',
+        'permissionOverrides.permission',
+      ],
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const map = new Map<number, Permission>();
+
+    // 1️⃣ Quyền từ role
+    user.role?.permissions?.forEach(p => {
+      map.set(p.id, p);
+    });
+
+    // 2️⃣ Quyền cá nhân (override)
+    user.permissionOverrides.forEach(op => {
+      if (op.granted) {
+        map.set(op.permission.id, op.permission);
+      } else {
+        map.delete(op.permission.id);
+      }
+    });
+
+    return Array.from(map.values());
+  }
+  async findUsersWithPermissions() {
+    return this.usersRepository.find({
+      relations: {
+        role: {
+          permissions: true,
+        },
+      },
+      where: {
+        user_id: Not(1),
+        role: {
+          name: Not('CUSTOMER'),
+        },
+      },
+      order: {
+        user_id: 'ASC',
+      },
+    });
+  }
+
+
+  async grantUserPermissions(userId: number, permissionIds: number[]) {
+    const user = await this.usersRepository.findOneBy({ user_id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    const permissions = await this.permissionRepo.findBy({
+      id: In(permissionIds),
+    });
+
+    for (const p of permissions) {
+      await this.userPermissionRepo.save({
+        userId,
+        permissionId: p.id,
+        granted: true,
+      });
+    }
+
+    return this.getEffectivePermissions(userId);
+  }
+  async revokeUserPermissions(userId: number, permissionIds: number[]) {
+    const user = await this.usersRepository.findOneBy({ user_id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    for (const pid of permissionIds) {
+      await this.userPermissionRepo.save({
+        userId,
+        permissionId: pid,
+        granted: false, // 🔥 override
+      });
+    }
+
+    return this.getEffectivePermissions(userId);
+  }
+  async updateUserRole(userId: number, roleId: number) {
+    const user = await this.usersRepository.findOne({
+      where: { user_id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const role = await this.roleRepository.findOneBy({ id: roleId });
+    if (!role) throw new NotFoundException('Role not found');
+
+    user.role = role;
+    return this.usersRepository.save(user);
+  }
+
 }

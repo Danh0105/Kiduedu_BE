@@ -20,10 +20,11 @@ export enum PaymentMethod {
   MOMO = 'momo',
   COD = 'cod',
   BANK = 'vnpay',
+  VIETQR = 'vietqr',
 }
 
 export enum PaymentStatus {
-  PENDING = 'PENDING_PAYMENT',
+  PENDING = 'Pending',
   PAID = 'PAID',
   FAILED = 'FAILED',
 }
@@ -75,9 +76,17 @@ export class OrderItemInputDto {
 
 
 export class CreateUserDto {
+  @IsOptional()
+  @IsInt()
+  id?: number;
+
   @IsString()
   @IsNotEmpty()
-  username: string;
+  username?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
 
   @IsEmail()
   email: string;

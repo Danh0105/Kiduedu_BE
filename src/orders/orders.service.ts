@@ -57,8 +57,8 @@ export class OrdersService {
       paymentMethod: data.paymentMethod ?? 'cod',
       paymentStatus:
         data.paymentMethod === 'cod'
-          ? 'PENDING_PAYMENT'
-          : 'PENDING_PAYMENT',
+          ? 'Pending'
+          : 'Pending',
     });
 
 
@@ -309,6 +309,37 @@ export class OrdersService {
         'user',
       ],
     });
+  }
+
+
+  async findAllPaginated(
+    page = 1,
+    limit = 10,
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.ordersRepo.findAndCount({
+      relations: [
+        'items',
+        'items.variant',
+        'items.variant.product',
+        'user',
+        'promotion',
+      ],
+      order: { orderDate: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
 }

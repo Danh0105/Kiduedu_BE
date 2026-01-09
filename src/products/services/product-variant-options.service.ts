@@ -18,11 +18,7 @@ export class ProductVariantOptionsService {
         @InjectRepository(ProductVariant)
         private readonly variantsRepo: Repository<ProductVariant>,
     ) { }
-    private baseQB(productId: number): SelectQueryBuilder<ProductVariant> {
-        return this.variantsRepo
-            .createQueryBuilder('v')
-            .where('v.productId = :productId', { productId });
-    }
+
     async listOptions(productId: number) {
         const list = await this.variantOptionRepo.find({
             where: { productId },
