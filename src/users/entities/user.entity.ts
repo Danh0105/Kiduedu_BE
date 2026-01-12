@@ -18,6 +18,7 @@ import { UserProfileBusiness } from './user_profile_business.entity';
 import { Role } from '../../role/entities/role.entity';
 import { Permission } from '../../permission/entities/permission.entity';
 import { UserPermission } from './user-permission.entity';
+import { Product } from 'src/products/entities/product.entity';
 
 export enum CustomerType {
   INDIVIDUAL = 'individual',
@@ -53,6 +54,7 @@ export class User {
     type: 'enum',
     enum: CustomerType,
     default: CustomerType.INDIVIDUAL,
+    enumName: 'users_customer_type_enum',
   })
   customer_type: CustomerType;
 
@@ -107,5 +109,8 @@ export class User {
     { eager: true },
   )
   permissionOverrides: UserPermission[];
+
+  @OneToMany(() => Product, product => product.createdBy)
+  products: Product[];
 
 }

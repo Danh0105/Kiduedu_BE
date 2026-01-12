@@ -1,8 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, In, IsNull, Not, LessThan } from 'typeorm';
@@ -10,14 +8,11 @@ import { Product } from '../entities/product.entity';
 import { ProductImage } from '../entities/product-image.entity';
 import { ProductVariant } from '../entities/product-variant.entity';
 import { Category } from '../../categories/entities/category.entity';
-import { CreateProductDto } from '../dto/create-product.dto';
 import { ProductVariantPrice } from '../entities/product-variant-price.entity';
 import { ProductVariantInventory } from '../entities/product-variant-inventory.entity';
-import { UpdateProductDto } from '../dto/update-product.dto';
 import { UploadService } from '../../upload/upload.service';
 import { promises as fs } from 'fs';
 import { join, relative } from 'path';
-import { InitialReceiptDto } from '../dto/initial-receipt.dto';
 import { InventoryReceipt } from '../entities/inventory-receipt.entity';
 import { Supplier } from '../entities/supplier.entity';
 import { InventoryReceiptItem } from '../entities/inventory-receipt-item.entity';
@@ -317,7 +312,6 @@ export class ProductService {
     await this.productRepository.update(id, {
       productName: data.productName,
       categoryId: data.categoryId,
-      price: data.price,
       origin: data.origin,
       status: data.status,
       shortDescription: data.shortDescription,
@@ -583,7 +577,8 @@ export class ProductService {
         'images',
         'variants',
         'variants.prices',
-        'variants.inventory'
+        'variants.inventory',
+        'createdBy'
       ],
       order: { productId: 'DESC' },
       skip: (page - 1) * limit,

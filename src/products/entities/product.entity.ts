@@ -13,6 +13,7 @@ import {
 import { Category } from '../../categories/entities/category.entity';
 import { ProductImage } from './product-image.entity';
 import { ProductVariant } from './product-variant.entity';
+import { User } from 'src/users/entities/user.entity';
 
 
 
@@ -103,7 +104,9 @@ export class Product {
   })
   updatedAt: Date;
 
-  @Column({ name: 'price', type: 'decimal', precision: 12, scale: 2 })
-  price: number;
+
+  @ManyToOne(() => User, user => user.products)
+  @JoinColumn({ name: 'created_by' })
+  createdBy: User;
 
 }

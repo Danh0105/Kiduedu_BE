@@ -16,13 +16,8 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
-import { CreateProductDto } from '../dto/create-product.dto';
-import { UpdateProductDto } from '../dto/update-product.dto';
 import { Public } from 'src/auth/public.decorator';
-import { plainToInstance } from 'class-transformer';
-import { ProductResponseDto } from '../dto/ProductResponse.dto';
-import { PaginatedResponseDto } from '../dto/PaginatedResponse.dto';
-import { AnyFilesInterceptor, FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
@@ -54,7 +49,7 @@ export class ProductController {
     } catch { }
 
     return this.productService.create(
-      { ...body, variants },
+      { ...body, variants, createdBy: Number(body.createdBy), },
       files,
     );
   }

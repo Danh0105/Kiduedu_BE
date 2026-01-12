@@ -23,6 +23,9 @@ import { ChatbotModule } from './chatbot/chatbot.module';
 import { VnpayModule } from './vnpay/vnpay.module';
 import { InqBillModule } from './viettinbank/inq-bill/inq-bill.module';
 import { NotifyBillModule } from './viettinbank/notify-bill/notify-bill.module';
+import { VietQrModule } from './viettinbank/vietqr/vietqr.module';
+import { SpinsModule } from './spins/spins.module';
+import { ParticipantsModule } from './participants/participants.module';
 
 @Module({
   imports: [
@@ -78,8 +81,9 @@ import { NotifyBillModule } from './viettinbank/notify-bill/notify-bill.module';
     AuthModule,
     ProductModule,
     CategoriesModule,
-/*     OrdersModule,
- */    PromotionsModule,
+    /*     OrdersModule,
+     */
+    PromotionsModule,
     CartModule,
     StatisticsModule,
     FeedbackModule,
@@ -93,6 +97,8 @@ import { NotifyBillModule } from './viettinbank/notify-bill/notify-bill.module';
     BannerModule,
     ChatbotModule,
     NotifyBillModule,
+    VietQrModule,
+    ParticipantsModule
   ],
   controllers: [AppController],
   providers: [AppService],
