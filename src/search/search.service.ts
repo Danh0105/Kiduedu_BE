@@ -52,37 +52,46 @@ export class SearchService {
   // ============================================================
   private baseProductSelect(): string {
     return `
-      p.product_id AS "productId",
-      p.product_name AS "productName",
+    p.product_id AS "productId",
+    p.product_name AS "productName",
 
-      (
-        SELECT pvpr.price
-        FROM public.product_variant_prices pvpr
-        JOIN public.product_variants pv ON pv.variant_id = pvpr.variant_id
-        WHERE pv.product_id = p.product_id
-          AND pvpr.start_at <= NOW()
-          AND (pvpr.end_at IS NULL OR pvpr.end_at >= NOW())
-        ORDER BY
-          CASE
-            WHEN pvpr.price_type = 'promo' THEN 0
-            WHEN pvpr.price_type = 'base'  THEN 1
-            ELSE 2
-          END,
-          pvpr.start_at DESC
-        LIMIT 1
-      ) AS price,
+    /* ================= BASE PRICE ================= */
+    (
+      SELECT pvpr.price
+      FROM public.product_variant_prices pvpr
+      JOIN public.product_variants pv ON pv.variant_id = pvpr.variant_id
+      WHERE pv.product_id = p.product_id
+        AND pvpr.price_type = 'base'
+        AND pvpr.start_at <= NOW()
+        AND (pvpr.end_at IS NULL OR pvpr.end_at >= NOW())
+      ORDER BY pvpr.start_at DESC
+      LIMIT 1
+    ) AS "basePrice",
 
-      NULLIF(
-        BTRIM(REGEXP_REPLACE(COALESCE(p.short_description, ''), '<[^>]+>', ' ', 'g')),
-      '') AS "shortDescription",
+    /* ================= PROMO PRICE ================= */
+    (
+      SELECT pvpr.price
+      FROM public.product_variant_prices pvpr
+      JOIN public.product_variants pv ON pv.variant_id = pvpr.variant_id
+      WHERE pv.product_id = p.product_id
+        AND pvpr.price_type = 'promo'
+        AND pvpr.start_at <= NOW()
+        AND (pvpr.end_at IS NULL OR pvpr.end_at >= NOW())
+      ORDER BY pvpr.start_at DESC
+      LIMIT 1
+    ) AS "promoPrice",
 
-      img.image_url AS "imageUrl",
+    NULLIF(
+      BTRIM(REGEXP_REPLACE(COALESCE(p.short_description, ''), '<[^>]+>', ' ', 'g')),
+    '') AS "shortDescription",
 
-      p.category_id AS "categoryId",
-      c.category_name AS "categoryName",
-      p.created_at AS "createdAt"
-    `;
+    img.image_url AS "imageUrl",
+    p.category_id AS "categoryId",
+    c.category_name AS "categoryName",
+    p.created_at AS "createdAt"
+  `;
   }
+
 
   // ============================================================
   // IMAGE JOIN

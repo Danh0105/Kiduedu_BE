@@ -29,6 +29,7 @@ export class VietQrService {
                 signDataString,
                 process.env.VIETINBANK_PRIVATE_KEY_PATH!,
             );
+            console.log(dto)
             const res = await axios.post(
                 `${process.env.VIETINBANK_BASE_URL}`,
                 dto,
@@ -41,6 +42,7 @@ export class VietQrService {
                     timeout: 15000,
                 },
             );
+
 
             const responseData = res.data;
 

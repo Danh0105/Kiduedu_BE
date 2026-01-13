@@ -23,7 +23,7 @@ export class MomoService {
     this.partnerCode = this.configService.get<string>('MOMO_PARTNER_CODE', '');
     this.accessKey = this.configService.get<string>('MOMO_ACCESS_KEY', '');
     this.secretKey = this.configService.get<string>('MOMO_SECRET_KEY', '');
-    this.endpoint = 'https://test-payment.momo.vn/v2/gateway/api/create';
+    this.endpoint = 'https://payment.momo.vn/v2/gateway/api/create';
 
   }
 
@@ -36,10 +36,10 @@ export class MomoService {
     const orderInfo = 'Thanh toán thử nghiệm';
 
     // FE nhận redirect
-    const redirectUrl = 'http://localhost:3001/payment-result';
+    const redirectUrl = 'https://www.kidoedu.edu.vn/payment-result';
 
     // BE nhận IPN
-    const ipnUrl = 'https://4cd35a7ea14c.ngrok-free.app/momo/payment-notify';
+    const ipnUrl = 'https://kidoedu.vn/momo/payment-notify';
 
     const requestType = 'captureWallet';
 
@@ -91,7 +91,6 @@ export class MomoService {
     const { orderId, resultCode } = body;
 
     const realOrderId = Number(orderId.split('_')[0]);
-    console.log('realOrderId', realOrderId);
 
     const order = await this.orderRepo.findOne({
       where: { orderId: realOrderId },

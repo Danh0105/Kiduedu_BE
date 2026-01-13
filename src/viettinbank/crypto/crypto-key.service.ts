@@ -8,10 +8,12 @@ import * as path from 'path';
 export class CryptoKeyService {
     private readonly privateKey: string;
     private readonly publicKey: string;
+    private readonly notifyCert: string; // 👈 BỔ SUNG
 
     constructor() {
         const privateKeyPath = process.env.VIETINBANK_PRIVATE_KEY_PATH;
         const publicKeyPath = process.env.VIETINBANK_PUBLIC_KEY_PATH;
+        const notifyCertPath = process.env.VIETINBANK_NOTIFY_CERT_PATH; // 👈 BỔ SUNG
 
         if (!privateKeyPath) {
             throw new Error('VIETINBANK_PRIVATE_KEY_PATH is not defined');
@@ -21,8 +23,13 @@ export class CryptoKeyService {
             throw new Error('VIETINBANK_PUBLIC_KEY_PATH is not defined');
         }
 
+        if (!notifyCertPath) {
+            throw new Error('VIETINBANK_NOTIFY_CERT_PATH is not defined');
+        }
+
         const resolvedPrivate = path.resolve(privateKeyPath);
         const resolvedPublic = path.resolve(publicKeyPath);
+        const resolvedNotifyCert = path.resolve(notifyCertPath);
 
         if (!fs.existsSync(resolvedPrivate)) {
             throw new Error(`Private key not found: ${resolvedPrivate}`);
@@ -32,25 +39,44 @@ export class CryptoKeyService {
             throw new Error(`Public key not found: ${resolvedPublic}`);
         }
 
+        if (!fs.existsSync(resolvedNotifyCert)) {
+            throw new Error(`Notify cert not found: ${resolvedNotifyCert}`);
+        }
+
         this.privateKey = fs.readFileSync(resolvedPrivate, 'utf8');
         this.publicKey = fs.readFileSync(resolvedPublic, 'utf8');
+        this.notifyCert = fs.readFileSync(resolvedNotifyCert, 'utf8'); // 👈 BỔ SUNG
 
         console.log('🔐 CryptoKeyService loaded keys successfully');
     }
 
-    sign(data: string): string {
-        const signer = crypto.createSign('RSA-SHA256');
-        signer.update(data);
-        signer.end();
-
-        return signer.sign(this.privateKey, 'base64');
-    }
-
+    /** Dùng cho các flow nội bộ / verify response */
     verify(data: string, signature: string): boolean {
         const verifier = crypto.createVerify('RSA-SHA256');
         verifier.update(data);
         verifier.end();
 
         return verifier.verify(this.publicKey, signature, 'base64');
+    }
+
+    /** 👈 DÙNG RIÊNG CHO VIETINBANK NOTIFY */
+    verifyNotify(data: string, signature: string): boolean {
+        const verifier = crypto.createVerify('RSA-SHA256');
+        verifier.update(data);
+        verifier.end();
+
+        return verifier.verify(
+            this.notifyCert,
+            Buffer.from(signature, 'base64'),
+        );
+    }
+
+    /** Ký response trả VietinBank */
+    sign(data: string): string {
+        const signer = crypto.createSign('RSA-SHA256');
+        signer.update(data);
+        signer.end();
+
+        return signer.sign(this.privateKey, 'base64');
     }
 }
