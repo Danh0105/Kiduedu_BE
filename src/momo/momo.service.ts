@@ -45,7 +45,7 @@ export class MomoService {
     const redirectUrl = 'https://www.kidoedu.edu.vn/payment-result';
 
     // BE nhận IPN
-    const ipnUrl = 'https://kidoedu.vn/momo/payment-notify';
+    const ipnUrl = 'https://www.kidoedu.vn/momo/payment-notify';
 
     const requestType = 'captureWallet';
 
