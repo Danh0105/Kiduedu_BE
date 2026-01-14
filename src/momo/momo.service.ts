@@ -28,6 +28,12 @@ export class MomoService {
   }
 
   async createPayment(amount: number, orderId: number) {
+    console.log('MOMO ENV:', {
+      partnerCode: process.env.MOMO_PARTNER_CODE,
+      accessKey: process.env.MOMO_ACCESS_KEY,
+      secretKey: process.env.MOMO_SECRET_KEY?.slice(0, 5),
+    });
+
     if (!Number.isInteger(orderId)) {
       throw new BadRequestException('Invalid orderId');
     }
