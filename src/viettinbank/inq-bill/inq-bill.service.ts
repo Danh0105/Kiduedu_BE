@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InqBillRequestDto } from './inq-bill-request.dto';
 import { InqBillResponseDto } from './inq-bill-response.dto';
 import { CryptoKeyService } from '../crypto/crypto-key.service';
@@ -25,6 +25,9 @@ export class InqBillService {
     }
 
     handleInquiry(dto: InqBillRequestDto): InqBillResponseDto {
+        if (!dto || !dto.header || !dto.data) {
+            throw new BadRequestException('Invalid request structure');
+        }
         const { header, data } = dto;
 
         const verifyString =
