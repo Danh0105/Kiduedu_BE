@@ -25,10 +25,31 @@ export class InqBillService {
     }
 
     handleInquiry(dto: InqBillRequestDto): InqBillResponseDto {
-        if (!dto || !dto.header || !dto.data) {
-            throw new BadRequestException('Invalid request structure');
+        const header = dto?.header;
+        const data = dto?.data;
+
+        // ❗ KHÔNG THROW
+        if (!header || !data) {
+            return this.buildError(
+                {
+                    header: header ?? {
+                        msgId: '',
+                        msgType: '1110',
+                        channelId: '',
+                        providerId: '',
+                        merchantId: '',
+                        productId: '',
+                    } as any,
+                    data: data ?? {} as any,
+                },
+                '99',
+                'Sai cấu trúc dữ liệu',
+            );
         }
-        const { header, data } = dto;
+
+        if (!data.transId || !data.transTime || !data.custCode) {
+            return this.buildError(dto, '99', 'Thiếu dữ liệu bắt buộc');
+        }
 
         const verifyString =
             this.n(data.transId) +
