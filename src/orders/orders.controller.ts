@@ -83,4 +83,5 @@ export class OrdersController {
     await this.ordersService.remove(id);
     return { message: 'Order deleted successfully' };
   }
+
 }

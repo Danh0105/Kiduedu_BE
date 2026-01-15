@@ -52,12 +52,19 @@ export class CryptoKeyService {
 
     /** Dùng cho các flow nội bộ / verify response */
     verify(data: string, signature: string): boolean {
-        const verifier = crypto.createVerify('RSA-SHA256');
-        verifier.update(data);
-        verifier.end();
+        try {
+            const verifier = crypto.createVerify('RSA-SHA256');
+            verifier.update(data, 'utf8');
+            verifier.end();
 
-        return verifier.verify(this.publicKey, signature, 'base64');
+            const cleanSignature = signature.replace(/\s+/g, '');
+            return verifier.verify(this.publicKey, cleanSignature, 'base64');
+        } catch {
+            return false;
+        }
     }
+
+
 
     /** 👈 DÙNG RIÊNG CHO VIETINBANK NOTIFY */
     verifyNotify(data: string, signature: string): boolean {
@@ -74,7 +81,7 @@ export class CryptoKeyService {
     /** Ký response trả VietinBank */
     sign(data: string): string {
         const signer = crypto.createSign('RSA-SHA256');
-        signer.update(data);
+        signer.update(data, 'utf8');
         signer.end();
 
         return signer.sign(this.privateKey, 'base64');

@@ -1,7 +1,7 @@
 export class InqBillResponseDto {
     header: {
         msgId: string;
-        msgType: '1110';
+        msgType: string;
         channelId: string;
         providerId: string;
         merchantId: string;
@@ -14,17 +14,17 @@ export class InqBillResponseDto {
             errorCode: string;
             errorDesc: string;
         };
-        details?: {
+        details: {
             transId: string;
             transTime: string;
             custCode: string;
             custName: string;
-            billId?: string | null;
+            billId: string | null;
             amount: string;
-            amountMin?: string | null;
-            preseve1?: string | null;
-            preseve2?: string | null;
-            preseve3?: string | null;
+            amountMin: string | null;
+            preseve1: string | null;
+            preseve2: string | null;
+            preseve3: string | null;
         };
     };
 }

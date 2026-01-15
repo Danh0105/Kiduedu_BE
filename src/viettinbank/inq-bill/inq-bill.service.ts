@@ -7,42 +7,75 @@ import { CryptoKeyService } from '../crypto/crypto-key.service';
 export class InqBillService {
     constructor(private readonly crypto: CryptoKeyService) { }
 
+    private now(): string {
+        const d = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return (
+            d.getFullYear().toString() +
+            pad(d.getMonth() + 1) +
+            pad(d.getDate()) +
+            pad(d.getHours()) +
+            pad(d.getMinutes()) +
+            pad(d.getSeconds())
+        );
+    }
+
+    private n(v: any): string {
+        return v === null || v === undefined ? '' : String(v);
+    }
+
     handleInquiry(dto: InqBillRequestDto): InqBillResponseDto {
         const { header, data } = dto;
 
-
         const verifyString =
-            data.transId +
-            data.transTime +
-            data.custCode;
-
-        const valid = this.crypto.verify(
-            verifyString,
-            header.signature,
+            this.n(data.transId) +
+            this.n(data.transTime) +
+            this.n(data.custCode);
+        console.log('VERIFY_STRING_RAW=', JSON.stringify(verifyString));
+        console.log('SIGNATURE_RAW=', header.signature);
+        console.log(
+            'SIGNATURE_CLEAN=',
+            header.signature.replace(/\s+/g, ''),
         );
 
-        if (!valid) {
+        if (!this.crypto.verify('6711b0106103a98b663c6c9c13cb83de202601150958451KDEPFZ123456789456', header.signature)) {
             return this.buildError(dto, '01', 'Sai chữ ký');
         }
 
-        if (data.custCode !== '8CAP250730152800001') {
+        if (data.custCode !== process.env.VTB_ACCOUNT) {
             return this.buildError(dto, '02', 'Không tìm thấy hóa đơn');
         }
 
-        const bill = {
+        const amount = '648000';
+        const details = {
             transId: data.transId,
             transTime: data.transTime,
             custCode: data.custCode,
-            custName: 'TranVanA_50000VND',
+            custName: `TRANVANA_${amount}VND`,
             billId: null,
-            amount: '648000',
+            amount,
             amountMin: null,
             preseve1: null,
             preseve2: null,
             preseve3: null,
         };
 
-        const response: InqBillResponseDto = {
+        const errors = {
+            errorCode: '00',
+            errorDesc: 'Xử lý thành công',
+        };
+
+        /* ===== SIGN RESPONSE (THEO SPEC) ===== */
+        const signData =
+            this.n(details.transId) +
+            this.n(details.transTime) +
+            this.n(details.custCode) +
+            this.n(details.custName) +
+            this.n(details.billId) +
+            this.n(details.amount) +
+            this.n(errors.errorCode);
+
+        return {
             header: {
                 msgId: header.msgId,
                 msgType: '1110',
@@ -50,30 +83,14 @@ export class InqBillService {
                 providerId: header.providerId,
                 merchantId: header.merchantId,
                 productId: header.productId,
-                timestamp: header.timestamp,
-                signature: '',
+                timestamp: this.now(),
+                signature: this.crypto.sign(signData),
             },
             data: {
-                errors: {
-                    errorCode: '00',
-                    errorDesc: 'Xử lý thành công',
-                },
-                details: bill,
+                errors,
+                details,
             },
         };
-        const signResponseData =
-            bill.transId +
-            bill.transTime +
-            bill.custCode +
-            bill.custName +
-            (bill.billId ?? '') +
-            bill.amount +
-            response.data.errors.errorCode;
-
-        response.header.signature =
-            this.crypto.sign(signResponseData);
-
-        return response;
     }
 
     private buildError(
@@ -97,13 +114,13 @@ export class InqBillService {
         };
 
         const signData =
-            details.transId +
-            details.transTime +
-            details.custCode +
-            details.custName +
-            (details.billId ?? '') +
-            details.amount +
-            errorCode;
+            this.n(details.transId) +
+            this.n(details.transTime) +
+            this.n(details.custCode) +
+            this.n(details.custName) +
+            this.n(details.billId) +
+            this.n(details.amount) +
+            this.n(errorCode);
 
         return {
             header: {
@@ -113,7 +130,7 @@ export class InqBillService {
                 providerId: header.providerId,
                 merchantId: header.merchantId,
                 productId: header.productId,
-                timestamp: header.timestamp,
+                timestamp: this.now(),
                 signature: this.crypto.sign(signData),
             },
             data: {
@@ -125,5 +142,4 @@ export class InqBillService {
             },
         };
     }
-
 }

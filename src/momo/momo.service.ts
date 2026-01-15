@@ -6,6 +6,7 @@ import { Order } from '../orders/entities/order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { number } from 'joi';
+import { MomoIpnDto } from './momo.dto';
 
 @Injectable()
 export class MomoService {
@@ -28,12 +29,6 @@ export class MomoService {
   }
 
   async createPayment(amount: number, orderId: number) {
-    console.log('MOMO ENV:', {
-      partnerCode: process.env.MOMO_PARTNER_CODE,
-      accessKey: process.env.MOMO_ACCESS_KEY,
-      secretKey: process.env.MOMO_SECRET_KEY?.slice(0, 5),
-    });
-
     if (!Number.isInteger(orderId)) {
       throw new BadRequestException('Invalid orderId');
     }
@@ -45,7 +40,7 @@ export class MomoService {
     const redirectUrl = 'https://www.kidoedu.edu.vn/payment-result';
 
     // BE nhận IPN
-    const ipnUrl = 'https://www.kidoedu.vn/momo/payment-notify';
+    const ipnUrl = 'https://kidoedu.vn/momo/payment-notify';
 
     const requestType = 'captureWallet';
 
@@ -91,36 +86,60 @@ export class MomoService {
   /* =========================================================
      IPN / WEBHOOK
      ========================================================= */
-  async handlePaymentNotify(body: any) {
-    console.log('📩 IPN BODY:', body);
+  async handlePaymentNotify(body: MomoIpnDto) {
+    console.log('📩 MOMO IPN:', body);
 
-    const { orderId, resultCode } = body;
+    if (!body?.orderId) return;
 
-    const realOrderId = Number(orderId.split('_')[0]);
+    /* ===== 1. VERIFY SIGNATURE ===== */
+    const rawSignature =
+      `accessKey=${this.accessKey}` +
+      `&amount=${body.amount}` +
+      `&extraData=${body.extraData || ''}` +
+      `&message=${body.message}` +
+      `&orderId=${body.orderId}` +
+      `&orderInfo=${body.orderInfo}` +
+      `&orderType=${body.orderType}` +
+      `&partnerCode=${body.partnerCode}` +
+      `&payType=${body.payType}` +
+      `&requestId=${body.requestId}` +
+      `&responseTime=${body.responseTime}` +
+      `&resultCode=${body.resultCode}` +
+      `&transId=${body.transId}`;
+
+    const signature = crypto
+      .createHmac('sha256', this.secretKey)
+      .update(rawSignature)
+      .digest('hex');
+
+    if (signature !== body.signature) {
+      console.error('❌ MOMO IPN SIGNATURE INVALID');
+      return;
+    }
+
+    /* ===== 2. PARSE ORDER ID ===== */
+    const realOrderId = Number(body.orderId.split('_')[0]);
+    if (isNaN(realOrderId)) return;
 
     const order = await this.orderRepo.findOne({
       where: { orderId: realOrderId },
     });
+    if (!order) return;
 
-    if (!order) {
-      return { resultCode: 99, message: 'Order not found' };
-    }
+    /* ===== 3. IDEMPOTENT ===== */
+    if (order.paymentStatus === 'Paid') return;
 
-    // idempotent
-    if (order.paymentStatus === 'Paid') {
-      return { resultCode: 0, message: 'Already processed' };
-    }
-
-    if (resultCode === 0) {
+    /* ===== 4. BUSINESS ===== */
+    if (body.resultCode === 0) {
       order.paymentStatus = 'Paid';
       order.status = 'Confirmed';
+      order.orderId = body.transId;
     } else {
       order.paymentStatus = 'Failed';
     }
 
     await this.orderRepo.save(order);
-
-    return { resultCode: 0, message: 'OK' };
   }
+
 
 }

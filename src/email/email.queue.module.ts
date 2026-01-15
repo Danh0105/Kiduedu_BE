@@ -12,8 +12,8 @@ import { SettingsModule } from 'src/settings/settings.module';
             name: 'emailQueue',
             useFactory: (config: ConfigService) => ({
                 connection: {
-                    host: config.get('REDIS_HOST'),
-                    port: config.get<number>('REDIS_PORT'),
+                    host: process.env.REDIS_HOST,
+                    port: Number(process.env.REDIS_PORT),
                 },
             }),
             inject: [ConfigService],

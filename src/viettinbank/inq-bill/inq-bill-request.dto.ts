@@ -1,17 +1,11 @@
-import {
-    IsString,
-    IsObject,
-    IsOptional,
-    ValidateNested,
-    IsIn,
-} from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class InqBillHeaderDto {
     @IsString()
     msgId: string;
 
-    @IsIn(['1100'])
+    @IsString()
     msgType: string;
 
     @IsString()
@@ -30,33 +24,34 @@ export class InqBillHeaderDto {
     productId: string;
 
     @IsString()
-    timestamp: string; // MMddyyyyHHmmss
+    timestamp: string;
 
-    @IsOptional()
     @IsString()
-    username?: string;
+    recordNum: string;
+
+    @IsString()
+    version: string;
+
+    @IsString()
+    language: string;
 
     @IsString()
     signature: string;
-
-    @IsOptional()
-    @IsObject()
-    additionalProperties?: Record<string, any>;
 }
 
 export class InqBillDataDto {
     @IsString()
     transId: string;
 
+    @IsOptional()
+    @IsString()
+    channelId?: string;
+
     @IsString()
     transTime: string;
 
     @IsString()
     custCode: string;
-
-    @IsOptional()
-    @IsObject()
-    additionalProperties?: Record<string, any>;
 }
 
 export class InqBillRequestDto {
@@ -67,8 +62,4 @@ export class InqBillRequestDto {
     @ValidateNested()
     @Type(() => InqBillDataDto)
     data: InqBillDataDto;
-
-    @IsOptional()
-    @IsObject()
-    additionalProperties?: Record<string, any>;
 }

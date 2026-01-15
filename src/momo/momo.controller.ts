@@ -1,5 +1,6 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode } from '@nestjs/common';
 import { MomoService } from './momo.service';
+import { MomoIpnDto } from './momo.dto';
 
 @Controller('momo')
 export class MomoController {
@@ -12,8 +13,8 @@ export class MomoController {
     return this.momoService.createPayment(body.amount, body.orderId);
   }
   @Post('payment-notify')
-  async paymentNotify(@Body() body: any) {
-    console.log('🔥 IPN HIT CONTROLLER:', body);
-    return this.momoService.handlePaymentNotify(body);
+  @HttpCode(204)
+  async paymentNotify(@Body() body: MomoIpnDto) {
+    await this.momoService.handlePaymentNotify(body);
   }
 }
