@@ -38,7 +38,7 @@ export class InqBillService {
             header.signature.replace(/\s+/g, ''),
         );
 
-        if (!this.crypto.verify('6711b0106103a98b663c6c9c13cb83de202601150958451KDEPFZ123456789456', header.signature)) {
+        if (!this.crypto.verify(verifyString, header.signature)) {
             return this.buildError(dto, '01', 'Sai chữ ký');
         }
 
