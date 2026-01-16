@@ -45,24 +45,36 @@ export class CryptoKeyService {
 
         this.privateKey = fs.readFileSync(resolvedPrivate, 'utf8');
         this.publicKey = fs.readFileSync(resolvedPublic, 'utf8');
-        this.notifyCert = fs.readFileSync(resolvedNotifyCert, 'utf8'); // 👈 BỔ SUNG
+        this.notifyCert = fs.readFileSync(resolvedNotifyCert, 'utf8');
 
         console.log('🔐 CryptoKeyService loaded keys successfully');
     }
 
-    /** Dùng cho các flow nội bộ / verify response */
+
     verify(data: string, signature: string): boolean {
         try {
             const verifier = crypto.createVerify('RSA-SHA256');
-            verifier.update(data, 'utf8');
+
+            verifier.update(Buffer.from(data, 'utf8'));
             verifier.end();
 
-            const cleanSignature = signature.replace(/\s+/g, '');
-            return verifier.verify(this.publicKey, cleanSignature, 'base64');
-        } catch {
+            const cleanSignature = signature.replace(/[\r\n]/g, '')
+
+
+            return verifier.verify(
+                {
+                    key: this.notifyCert,
+                    padding: crypto.constants.RSA_PKCS1_PADDING
+
+                },
+                Buffer.from(cleanSignature, 'base64'),
+            );
+        } catch (e) {
+            console.error('VERIFY ERROR:', e);
             return false;
         }
     }
+
 
 
 

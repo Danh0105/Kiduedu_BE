@@ -41,6 +41,5 @@ async function bootstrap() {
   });
 
   await app.listen(3000, '0.0.0.0');
-  console.log('Server chạy tại http://localhost:3000');
 }
 bootstrap();
