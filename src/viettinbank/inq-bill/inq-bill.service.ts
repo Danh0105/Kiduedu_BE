@@ -2,10 +2,17 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InqBillRequestDto } from './inq-bill-request.dto';
 import { InqBillResponseDto } from './inq-bill-response.dto';
 import { CryptoKeyService } from '../crypto/crypto-key.service';
+import { Order } from 'src/orders/entities/order.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class InqBillService {
-    constructor(private readonly crypto: CryptoKeyService) { }
+    constructor(
+        private readonly crypto: CryptoKeyService,
+        @InjectRepository(Order)
+        private readonly orderRepo: Repository<Order>,
+    ) { }
 
     private now(): string {
         const d = new Date();
@@ -24,7 +31,7 @@ export class InqBillService {
         return v === null || v === undefined ? '' : String(v);
     }
 
-    handleInquiry(dto: InqBillRequestDto): InqBillResponseDto {
+    async handleInquiry(dto: InqBillRequestDto): Promise<InqBillResponseDto> {
         const header = dto?.header;
         const data = dto?.data;
 
@@ -69,8 +76,24 @@ export class InqBillService {
         if (data.custCode !== process.env.VTB_ACCOUNT) {
             return this.buildError(dto, '02', 'Không tìm thấy hóa đơn');
         }
+        const PREFIX = '1KDEPFZ';
 
-        const amount = '648000';
+        if (!data.custCode.startsWith(PREFIX)) {
+            return this.buildError(dto, '02', 'Mã khách hàng không hợp lệ');
+        }
+
+        const orderId = data.custCode.replace(PREFIX, '');
+        const order = await this.orderRepo.findOne({
+            where: { orderId: Number(orderId) },
+        });
+
+        if (!order) {
+            return this.buildError(dto, '02', 'Không tìm thấy hóa đơn');
+        }
+
+        const amount = String(order.totalAmount);
+
+
         const details = {
             transId: data.transId,
             transTime: data.transTime,

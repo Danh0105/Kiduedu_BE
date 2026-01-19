@@ -5,18 +5,26 @@ import { Category } from '../../categories/entities/category.entity';
 
 @Entity('promotion_applicability')
 export class PromotionApplicability {
-  @PrimaryGeneratedColumn()
-  applicability_id: number;
+  @PrimaryGeneratedColumn({ name: 'applicability_id' })
+  id: number;
 
-  @ManyToOne(() => Promotion, promotion => promotion.applicability, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Promotion, promotion => promotion.applicability, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'promotion_id' })
   promotion: Promotion;
 
-  @ManyToOne(() => Product, { nullable: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'product_id' })
-  product: Product;
+  product: Product | null;
 
-  @ManyToOne(() => Category, { nullable: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Category, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'category_id' })
-  category: Category;
+  category: Category | null;
 }

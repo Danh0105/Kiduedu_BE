@@ -62,7 +62,7 @@ export class VietQrService {
             if (!isValid) {
                 throw new Error('Invalid VietinBank signature');
             }
-
+            console.log("responseData", responseData)
             return responseData;
         } catch (error) {
 
@@ -70,9 +70,11 @@ export class VietQrService {
         }
     }
     async generateFromOrder(dto: GenerateVietQrDto) {
+        const accountNumber = `${process.env.VTB_ACCOUNT}${dto.orderId}`;
+
         const vietQrDto: GenVietQrDto = {
             data: {
-                accountNumber: process.env.VTB_ACCOUNT!,
+                accountNumber,
                 amount: dto.amount,
                 purposeOfTrans: dto.purpose,
             },
@@ -80,5 +82,6 @@ export class VietQrService {
 
         return this.generateQr(vietQrDto);
     }
+
 
 }

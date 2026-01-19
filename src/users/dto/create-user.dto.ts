@@ -56,7 +56,6 @@ export class OrderItemInputDto {
   @IsInt()
   variantId?: number | null;
 
-
   @ValidateIf(o => o.productId !== null)
   @IsInt()
   productId?: number | null;
@@ -135,4 +134,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(PaymentStatus)
   paymentStatus?: PaymentStatus;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  promotionId?: number;
 }

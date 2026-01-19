@@ -14,6 +14,7 @@ import { Category } from '../../categories/entities/category.entity';
 import { ProductImage } from './product-image.entity';
 import { ProductVariant } from './product-variant.entity';
 import { User } from 'src/users/entities/user.entity';
+import { PromotionApplicability } from 'src/promotions/entities/promotion-applicability.entity';
 
 
 
@@ -109,4 +110,9 @@ export class Product {
   @JoinColumn({ name: 'created_by' })
   createdBy: User;
 
+  @OneToMany(
+    () => PromotionApplicability,
+    (pa) => pa.product,
+  )
+  promotionApplicabilities: PromotionApplicability[];
 }

@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
 import { CategoryAttribute } from 'src/products/entities/category-attribute.entity';
+import { PromotionApplicability } from 'src/promotions/entities/promotion-applicability.entity';
 
 @Entity('categories')
 export class Category {
@@ -35,4 +36,11 @@ export class Category {
 
   @OneToMany(() => CategoryAttribute, (ca) => ca.category)
   categoryAttributes: CategoryAttribute[];
+
+  @OneToMany(
+    () => PromotionApplicability,
+    (pa) => pa.category,
+  )
+  promotionApplicabilities: PromotionApplicability[];
+
 }

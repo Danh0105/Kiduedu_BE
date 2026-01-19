@@ -19,6 +19,7 @@ import * as nodemailer from 'nodemailer';
 import { Role } from 'src/role/entities/role.entity';
 import { CreateUserAdminDto } from './dto/create-user-admin';
 import { Permission } from '../permission/entities/permission.entity';
+import { Promotion } from '../promotions/entities/promotion.entity';
 
 /* ================= Helpers ================= */
 
@@ -288,7 +289,14 @@ export class UsersService {
       if (!savedUser.addresses) savedUser.addresses = [];
       const selectedAddress = await this.resolveAddress(mgr, savedUser, data.address);
 
-      const { order, items } = await this._createOrderProcess(mgr, savedUser, data.items, selectedAddress, data.paymentMethod);
+      const { order, items } = await this._createOrderProcess(
+        mgr,
+        savedUser,
+        data.items,
+        selectedAddress,
+        data.paymentMethod,
+        data.promotionId ?? undefined,
+      );
       await this.emailQueueService.addOrderSuccessNotifyJob({
         orderId: order.orderId,
         totalAmount: order.totalAmount,
@@ -344,7 +352,8 @@ export class UsersService {
     user: User,
     itemsDto: any[],
     shippingAddress: Address | null,
-    paymentMethod: PaymentMethod
+    paymentMethod: PaymentMethod,
+    promotionId?: number,
   ) {
     /* ===============================
        1) LOAD VARIANTS
@@ -387,14 +396,14 @@ export class UsersService {
 
       return mgr.create(OrderItem, {
         variant,
-        quantity: i.quantity,
+        quantity: Number(i.quantity),
         pricePerUnit: finalPrice,
         attributes: i.attributes || {},
       });
     });
 
     /* ===============================
-       3) CALC TOTAL
+       3) CALC SUBTOTAL
     =============================== */
 
     const subtotal = itemsEntities.reduce(
@@ -402,29 +411,103 @@ export class UsersService {
       0,
     );
 
+    if (subtotal <= 0) {
+      throw new BadRequestException('Subtotal không hợp lệ');
+    }
+
     /* ===============================
-       4) CREATE ORDER (🔥 CẬP NHẬT)
+       4) VALIDATE PROMOTION
     =============================== */
+
+    let promotion: Promotion | null = null;
+    let discountAmount = 0;
+
+    if (promotionId) {
+      promotion = await mgr.getRepository(Promotion).findOne({
+        where: {
+          id: promotionId,
+          isActive: true,
+        },
+        lock: { mode: 'pessimistic_write' }, // 🔒 chống race condition voucher
+      });
+
+      if (!promotion) {
+        throw new BadRequestException('Khuyến mãi không hợp lệ');
+      }
+
+      const now = new Date();
+      if (now < promotion.startDate || now > promotion.endDate) {
+        throw new BadRequestException('Khuyến mãi đã hết hạn');
+      }
+
+      // 🎯 TÍNH GIẢM GIÁ
+      if (promotion.discountType === 'percentage') {
+        discountAmount = Math.floor(
+          (subtotal * Number(promotion.discountValue)) / 100,
+        );
+      } else {
+        discountAmount = Number(promotion.discountValue);
+      }
+
+      // Không cho giảm quá subtotal
+      discountAmount = Math.min(discountAmount, subtotal);
+
+      // 🎟️ VALIDATE VOUCHER
+      if (promotion.isVoucher) {
+        if (
+          promotion.usageLimit !== null &&
+          promotion.usageLimit !== undefined &&
+          promotion.usedCount >= promotion.usageLimit
+        ) {
+          throw new BadRequestException('Voucher đã hết lượt sử dụng');
+        }
+      }
+
+    }
+
+    /* ===============================
+       5) CREATE ORDER (ONLY ONCE)
+    =============================== */
+
+    const totalAmount = subtotal - discountAmount;
 
     const savedOrder = await mgr.save(
       mgr.create(Order, {
         user,
         subtotal,
-        discountAmount: 0,
-        totalAmount: subtotal,
+        discountAmount,
+        totalAmount,
         status: 'Pending',
         paymentMethod,
         paymentStatus: 'Pending',
-
         shippingAddress,
+        promotion,
+        promotionId: promotion?.id ?? null,
       }),
     );
+
+    /* ===============================
+       6) SAVE ORDER ITEMS
+    =============================== */
 
     itemsEntities.forEach((it) => (it.order = savedOrder));
     const savedItems = await mgr.save(itemsEntities);
 
-    return { order: savedOrder, items: savedItems };
+    /* ===============================
+       7) UPDATE VOUCHER USAGE
+    =============================== */
+
+    if (promotion?.isVoucher) {
+      promotion.usedCount += 1;
+      await mgr.save(promotion);
+    }
+
+    return {
+      order: savedOrder,
+      items: savedItems,
+    };
   }
+
 
   /* ========= VERIFY EMAIL API ========= */
 

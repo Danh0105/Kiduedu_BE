@@ -9,6 +9,7 @@ export class VietQrController {
 
     @Post('generate')
     generate(@Body() dto: GenerateVietQrDto) {
+        console.log("dto", dto)
         return this.service.generateFromOrder(dto);
     }
 

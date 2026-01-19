@@ -578,7 +578,10 @@ export class ProductService {
         'variants',
         'variants.prices',
         'variants.inventory',
-        'createdBy'
+        'createdBy',
+        'promotionApplicabilities',
+        'promotionApplicabilities.promotion',
+
       ],
       order: { productId: 'DESC' },
       skip: (page - 1) * limit,
