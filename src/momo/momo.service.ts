@@ -111,7 +111,6 @@ export class MomoService {
     if (body.resultCode === 0) {
       order.paymentStatus = 'Paid';
       order.status = 'Confirmed';
-      order.orderId = body.transId;
     } else {
       order.paymentStatus = 'Failed';
     }
