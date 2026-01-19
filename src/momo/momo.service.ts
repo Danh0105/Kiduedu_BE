@@ -93,7 +93,12 @@ export class MomoService {
     }
 
     const realOrderId = Number(body.orderId.split('_')[0]);
-    if (isNaN(realOrderId)) return;
+    console.log(realOrderId);
+
+    if (!Number.isSafeInteger(realOrderId)) {
+      console.error('Invalid realOrderId:', realOrderId);
+      return;
+    }
 
     const order = await this.orderRepo.findOne({
       where: { orderId: realOrderId },
