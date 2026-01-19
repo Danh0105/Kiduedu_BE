@@ -26,9 +26,20 @@ export class PromotionsService {
     return this.promotionRepo.save(promo);
   }
 
-  async findAll(): Promise<Promotion[]> {
-    return this.promotionRepo.find({ relations: ['applicability'] });
+  async findAll(isActive?: boolean): Promise<Promotion[]> {
+    const where: any = {};
+
+    if (typeof isActive === 'boolean') {
+      where.isActive = isActive;
+    }
+
+    return this.promotionRepo.find({
+      where,
+      relations: ['applicability', 'applicability.product', 'applicability.product.variants'],
+      order: { startDate: 'DESC' },
+    });
   }
+
 
   async findOne(id: number): Promise<Promotion> {
     const promo = await this.promotionRepo.findOne({

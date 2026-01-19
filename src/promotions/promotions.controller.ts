@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { PromotionsService } from './promotions.service';
 import { Promotion } from './entities/promotion.entity';
@@ -22,8 +23,12 @@ export class PromotionsController {
   }
 
   @Get()
-  findAll() {
-    return this.promotionsService.findAll();
+  findAll(
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.promotionsService.findAll(
+      isActive !== undefined ? isActive === 'true' : undefined,
+    );
   }
 
   @Get(':id')

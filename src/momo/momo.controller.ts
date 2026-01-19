@@ -14,7 +14,8 @@ export class MomoController {
   }
   @Post('payment-notify')
   @HttpCode(204)
-  async paymentNotify(@Body() body: MomoIpnDto) {
+  async momoIpn(@Body() body: MomoIpnDto) {
     await this.momoService.handlePaymentNotify(body);
   }
+
 }

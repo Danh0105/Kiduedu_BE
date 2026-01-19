@@ -87,15 +87,38 @@ export class MomoService {
      IPN / WEBHOOK
      ========================================================= */
   async handlePaymentNotify(body: MomoIpnDto) {
-    console.log('📩 MOMO IPN:', body);
+    if (!this.verifyIpnSignature(body)) {
+      console.error('❌ MOMO IPN SIGNATURE INVALID');
+      return;
+    }
 
-    if (!body?.orderId) return;
+    const realOrderId = Number(body.orderId.split('_')[0]);
+    if (isNaN(realOrderId)) return;
 
-    /* ===== 1. VERIFY SIGNATURE ===== */
+    const order = await this.orderRepo.findOne({
+      where: { orderId: realOrderId },
+    });
+    if (!order) return;
+
+    // Idempotent
+    if (order.paymentStatus === 'Paid') return;
+
+    if (body.resultCode === 0) {
+      order.paymentStatus = 'Paid';
+      order.status = 'Confirmed';
+      order.orderId = body.transId;
+    } else {
+      order.paymentStatus = 'Failed';
+    }
+
+    await this.orderRepo.save(order);
+  }
+
+  private verifyIpnSignature(body: MomoIpnDto): boolean {
     const rawSignature =
       `accessKey=${this.accessKey}` +
       `&amount=${body.amount}` +
-      `&extraData=${body.extraData || ''}` +
+      `&extraData=${body.extraData}` +
       `&message=${body.message}` +
       `&orderId=${body.orderId}` +
       `&orderInfo=${body.orderInfo}` +
@@ -112,33 +135,7 @@ export class MomoService {
       .update(rawSignature)
       .digest('hex');
 
-    if (signature !== body.signature) {
-      console.error('❌ MOMO IPN SIGNATURE INVALID');
-      return;
-    }
-
-    /* ===== 2. PARSE ORDER ID ===== */
-    const realOrderId = Number(body.orderId.split('_')[0]);
-    if (isNaN(realOrderId)) return;
-
-    const order = await this.orderRepo.findOne({
-      where: { orderId: realOrderId },
-    });
-    if (!order) return;
-
-    /* ===== 3. IDEMPOTENT ===== */
-    if (order.paymentStatus === 'Paid') return;
-
-    /* ===== 4. BUSINESS ===== */
-    if (body.resultCode === 0) {
-      order.paymentStatus = 'Paid';
-      order.status = 'Confirmed';
-      order.orderId = body.transId;
-    } else {
-      order.paymentStatus = 'Failed';
-    }
-
-    await this.orderRepo.save(order);
+    return signature === body.signature;
   }
 
 
