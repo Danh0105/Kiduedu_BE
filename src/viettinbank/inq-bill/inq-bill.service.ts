@@ -73,14 +73,8 @@ export class InqBillService {
             return this.buildError(dto, '01', 'Sai chữ ký');
         }
 
-        if (data.custCode !== process.env.VTB_ACCOUNT) {
-            return this.buildError(dto, '02', 'Không tìm thấy hóa đơn');
-        }
-        const PREFIX = '1KDEPFZ';
 
-        if (!data.custCode.startsWith(PREFIX)) {
-            return this.buildError(dto, '02', 'Mã khách hàng không hợp lệ');
-        }
+        const PREFIX = '1KDEPFZ';
 
         const orderId = data.custCode.replace(PREFIX, '');
         const order = await this.orderRepo.findOne({

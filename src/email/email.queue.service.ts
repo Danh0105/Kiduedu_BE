@@ -28,5 +28,21 @@ export class EmailQueueService {
             userEmail: order.user.email,
         });
     }
+    async addYepInvitationJob(data: {
+        email: string;
+        fullName: string;
+        qrCode: string;
+    }) {
+        await this.emailQueue.add(
+            'sendYepInvitation',
+            data,
+            {
+                attempts: 5,
+                backoff: 5000,
+                removeOnComplete: true,
+                removeOnFail: false,
+            },
+        );
+    }
 
 }

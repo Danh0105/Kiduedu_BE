@@ -13,8 +13,17 @@ export class Participant {
     @Column({ name: 'full_name', length: 100 })
     fullName: string;
 
-    @Column({ name: 'birth_date', type: 'date' })
-    birthDate: string;
+    @Column({ length: 150, unique: true })
+    email: string;
+
+    @Column({ name: 'qr_code', length: 255, unique: true, nullable: true })
+    qrCode: string;
+
+    @Column({ name: 'is_checked_in', default: false })
+    isCheckedIn: boolean;
+
+    @Column({ name: 'checked_in_at', type: 'timestamp', nullable: true })
+    checkedInAt: Date;
 
     @Column({ name: 'is_winner', default: false })
     isWinner: boolean;

@@ -23,10 +23,14 @@ export class EmailQueueProcessor extends WorkerHost {
       case 'sendVerifyEmail':
         return this.sendVerifyEmail(job.data.email, job.data.token);
 
-      case "sendOrderSuccessNotify":
+      case 'sendOrderSuccessNotify':
         return this.sendOrderSuccessNotify(job.data);
+
+      case 'sendYepInvitation':
+        return this.sendYepInvitation(job.data);
     }
   }
+
 
   /* =======================================================
      CREATE TRANSPORTER (reuse để tránh lỗi overload)
@@ -261,4 +265,114 @@ export class EmailQueueProcessor extends WorkerHost {
     console.log("📨 Order notify email sent →", result.accepted);
     return result;
   }
+  private async sendYepInvitation(data: {
+    email: string;
+    fullName: string;
+    qrCode: string;
+  }) {
+    const MAIL_USER = await this.settingsService.get("MAIL_USER_SENT");
+    const MAIL_PASS = await this.settingsService.get("MAIL_PASS_SENT");
+
+    if (!MAIL_USER || !MAIL_PASS) {
+      console.error("❌ MAIL_USER / MAIL_PASS thiếu trong DB");
+      return;
+    }
+
+    const transporter = await this.getTransporter(MAIL_USER, MAIL_PASS);
+
+    const checkinUrl =
+      `https://www.kidoedu.vn/checkin?code=${data.qrCode}`;
+
+    const qrImage =
+      `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(checkinUrl)}`;
+
+    const html = this.buildYepInvitationHTML(
+      data.fullName,
+      checkinUrl,
+      qrImage,
+    );
+
+    const result = await transporter.sendMail({
+      from: `Kido YEP <${MAIL_USER}>`,
+      to: data.email,
+      subject: "🎉 Thư mời tham dự Year End Party 2026",
+      html,
+    });
+
+    console.log("📨 YEP INVITE SENT →", result.accepted);
+    return result;
+  }
+  private buildYepInvitationHTML(
+    fullName: string,
+    checkinUrl: string,
+    qrImage: string,
+  ): string {
+    return `
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:40px 0;">
+<tr>
+<td align="center">
+
+<table width="600" cellpadding="0" cellspacing="0"
+style="background:#ffffff;border-radius:10px;overflow:hidden;
+box-shadow:0 6px 20px rgba(0,0,0,0.08);font-family:Arial">
+
+<tr>
+<td style="background:#2de42f4d;padding:20px;text-align:center;">
+  <img src="https://www.kidoedu.edu.vn/static/media/Logo.b35816c78d7c3753c12d.png"
+       width="120" />
+</td>
+</tr>
+
+<tr>
+<td style="padding:30px;color:#212529;">
+  <h2>🎉 Thư mời Year End Party 🎉</h2>
+
+  <p>Xin chào <b>${fullName}</b>,</p>
+
+  <p>
+    Kido trân trọng kính mời bạn tham dự <b>Year End Party 2026</b>.
+  </p>
+
+  <ul>
+    <li><b>⏰ Thời gian:</b> 18:00 – 22:00, 30/12/2026</li>
+    <li><b>📍 Địa điểm:</b> Trung tâm hội nghị Kido</li>
+    <li><b>👔 Dress code:</b> Smart Casual</li>
+  </ul>
+
+  <p><b>Vui lòng mang theo mã QR bên dưới để check-in:</b></p>
+
+  <div style="text-align:center;margin:20px 0;">
+    <img src="${qrImage}" width="220" />
+  </div>
+
+  <p style="text-align:center">
+    👉 <a href="${checkinUrl}">${checkinUrl}</a>
+  </p>
+
+  <p>Hẹn gặp bạn tại buổi tiệc! 🥂</p>
+
+  <p>
+    Trân trọng,<br/>
+    <b>Ban tổ chức YEP</b>
+  </p>
+</td>
+</tr>
+
+<tr>
+<td style="background:#f1f3f5;padding:15px;text-align:center;
+color:#6c757d;font-size:13px;">
+© ${new Date().getFullYear()} Kido — All rights reserved
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+`;
+  }
+
+
+
 }

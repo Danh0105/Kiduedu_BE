@@ -2,12 +2,14 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Participant } from './participant.entity';
-
+import { v4 as uuidv4 } from 'uuid';
+import { EmailQueueService } from 'src/email/email.queue.service';
 @Injectable()
 export class ParticipantsService {
     constructor(
         @InjectRepository(Participant)
         private readonly repo: Repository<Participant>,
+        private readonly emailQueueService: EmailQueueService,
     ) { }
 
     // FE gửi danh sách người tham gia
@@ -19,7 +21,6 @@ export class ParticipantsService {
         const entities = list.map(item =>
             this.repo.create({
                 fullName: item.fullName.trim(),
-                birthDate: item.birthDate,
             }),
         );
 
@@ -66,5 +67,86 @@ export class ParticipantsService {
     async reset() {
         await this.repo.update({}, { isWinner: false });
         return this.getRemaining();
+    }
+
+    async importFromFile(rows: any[]) {
+        const entities: Participant[] = [];
+
+        for (const row of rows) {
+            if (!row.fullName || !row.email) continue;
+
+            const email = row.email.toString().trim().toLowerCase();
+
+            const exists = await this.repo.findOne({ where: { email } });
+            if (exists) continue;
+
+            entities.push(
+                this.repo.create({
+                    fullName: row.fullName.trim(),
+                    email,
+                    qrCode: uuidv4(), // ⭐ gen mã QR
+                }),
+            );
+        }
+
+        if (!entities.length) {
+            throw new BadRequestException('Không có dữ liệu hợp lệ');
+        }
+
+        await this.repo.save(entities);
+        return this.getRemaining();
+    }
+    async checkInByQr(qrCode: string) {
+        const participant = await this.repo.findOne({
+            where: { qrCode },
+        });
+
+        if (!participant) {
+            throw new BadRequestException('QR không hợp lệ');
+        }
+
+        if (participant.isCheckedIn) {
+            throw new BadRequestException('Đã check-in trước đó');
+        }
+
+        participant.isCheckedIn = true;
+        participant.checkedInAt = new Date();
+
+        await this.repo.save(participant);
+        return participant;
+    }
+
+    async sendInviteEmail(participantId: number) {
+        const participant = await this.repo.findOne({
+            where: { id: participantId },
+        });
+
+        if (!participant) {
+            throw new BadRequestException('Không tìm thấy khách');
+        }
+
+        await this.emailQueueService.addYepInvitationJob({
+            email: participant.email,
+            fullName: participant.fullName,
+            qrCode: participant.qrCode,
+        });
+
+        return { message: 'Đã đưa email vào queue gửi' };
+    }
+
+    async sendInviteEmailToAll() {
+        const participants = await this.repo.find();
+
+        for (const p of participants) {
+            await this.emailQueueService.addYepInvitationJob({
+                email: p.email,
+                fullName: p.fullName,
+                qrCode: p.qrCode,
+            });
+        }
+
+        return {
+            sent: participants.length,
+        };
     }
 }
