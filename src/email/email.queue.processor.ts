@@ -330,12 +330,12 @@ box-shadow:0 6px 20px rgba(0,0,0,0.08);font-family:Arial">
   <p>Xin chào <b>${fullName}</b>,</p>
 
   <p>
-    Kido trân trọng kính mời bạn tham dự <b>Year End Party 2026</b>.
+    Kido trân trọng kính mời bạn tham dự <b>Year End Party 2025</b>.
   </p>
 
   <ul>
-    <li><b>⏰ Thời gian:</b> 18:00 – 22:00, 30/12/2026</li>
-    <li><b>📍 Địa điểm:</b> Trung tâm hội nghị Kido</li>
+    <li><b>⏰ Thời gian:</b> 10:00 – 12:00, 01/02/2026</li>
+    <li><b>📍 Địa điểm:</b>OSCAR PALACE</li>
     <li><b>👔 Dress code:</b> Smart Casual</li>
   </ul>
 
