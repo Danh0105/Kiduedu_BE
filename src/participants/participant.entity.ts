@@ -30,5 +30,8 @@ export class Participant {
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
+
+    @Column({ name: 'is_forced_winner', default: false })
+    isForcedWinner: boolean;
 }
 
