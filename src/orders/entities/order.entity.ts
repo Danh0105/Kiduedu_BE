@@ -121,4 +121,13 @@ export class Order {
     | 'Failed'
     | 'Cancelled'
     | 'Expired';
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  transId: string | null;
+
+  /**
+   * bankTransId: ID giao dịch tại ngân hàng
+   * BẮT BUỘC unique
+   */
+  @Column({ type: 'varchar', length: 50, nullable: true, unique: true })
+  bankTransId: string | null;
 }

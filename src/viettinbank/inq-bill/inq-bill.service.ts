@@ -81,15 +81,8 @@ export class InqBillService {
         if (order.paymentStatus === 'Paid') {
             return this.buildError(dto, '02', 'Ma KH/Hoa don khong ton tai');
         }
-        if (
-            order.paymentStatus === 'Failed' ||
-            order.paymentStatus === 'Cancelled' ||
-            order.paymentStatus === 'Expired'
-        ) {
-            return this.buildError(dto, '02', 'Không tìm thấy hóa đơn');
-        }
         if (order.paymentStatus === 'Pending') {
-            order.paymentStatus = 'Paid';
+            order.transId = data.transId;
             await this.orderRepo.save(order);
         }
 
