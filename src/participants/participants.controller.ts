@@ -57,4 +57,8 @@ export class ParticipantsController {
     async sendInviteToAll() {
         return this.service.sendInviteEmailToAll();
     }
+    @Get('checked-in')
+    getCheckedIn() {
+        return this.service.getCheckedIn();
+    }
 }

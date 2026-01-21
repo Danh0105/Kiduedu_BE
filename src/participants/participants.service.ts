@@ -149,4 +149,10 @@ export class ParticipantsService {
             sent: participants.length,
         };
     }
+    async getCheckedIn() {
+        return this.repo.find({
+            where: { isCheckedIn: true },
+            order: { checkedInAt: 'DESC' },
+        });
+    }
 }

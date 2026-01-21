@@ -62,12 +62,7 @@ export class InqBillService {
             this.n(data.transId) +
             this.n(data.transTime) +
             this.n(data.custCode);
-        console.log('VERIFY_STRING_RAW=', JSON.stringify(verifyString));
-        console.log('SIGNATURE_RAW=', header.signature);
-        console.log(
-            'SIGNATURE_CLEAN=',
-            header.signature.replace(/\s+/g, ''),
-        );
+
 
         if (!this.crypto.verify(verifyString, header.signature)) {
             return this.buildError(dto, '01', 'Sai chữ ký');
@@ -75,14 +70,27 @@ export class InqBillService {
 
 
         const PREFIX = '1KDEPFZ';
-
         const orderId = data.custCode.replace(PREFIX, '');
         const order = await this.orderRepo.findOne({
             where: { orderId: Number(orderId) },
         });
 
         if (!order) {
+            return this.buildError(dto, '02', 'Ma KH/Hoa don khong ton tai');
+        }
+        if (order.paymentStatus === 'Paid') {
+            return this.buildError(dto, '02', 'Ma KH/Hoa don khong ton tai');
+        }
+        if (
+            order.paymentStatus === 'Failed' ||
+            order.paymentStatus === 'Cancelled' ||
+            order.paymentStatus === 'Expired'
+        ) {
             return this.buildError(dto, '02', 'Không tìm thấy hóa đơn');
+        }
+        if (order.paymentStatus === 'Pending') {
+            order.paymentStatus = 'Paid';
+            await this.orderRepo.save(order);
         }
 
         const amount = String(order.totalAmount);
