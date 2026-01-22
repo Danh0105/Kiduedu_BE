@@ -5,6 +5,13 @@ import {
     CreateDateColumn,
 } from 'typeorm';
 
+export enum GuestType {
+    VIP = 'VIP',
+    PARTNER = 'PARTNER',
+    INTERNAL = 'INTERNAL',
+    GUEST = 'GUEST',
+}
+
 @Entity('participants')
 export class Participant {
     @PrimaryGeneratedColumn()
@@ -19,19 +26,35 @@ export class Participant {
     @Column({ name: 'qr_code', length: 255, unique: true, nullable: true })
     qrCode: string;
 
+    /* ===== CHECK-IN ===== */
     @Column({ name: 'is_checked_in', default: false })
     isCheckedIn: boolean;
 
     @Column({ name: 'checked_in_at', type: 'timestamp', nullable: true })
     checkedInAt: Date;
 
+    /* ===== TRÚNG THƯỞNG ===== */
     @Column({ name: 'is_winner', default: false })
     isWinner: boolean;
 
-    @CreateDateColumn({ name: 'created_at' })
-    createdAt: Date;
-
     @Column({ name: 'is_forced_winner', default: false })
     isForcedWinner: boolean;
-}
 
+    /* ===== THÔNG TIN KHÁCH MỜI ===== */
+    @Column({ length: 100, nullable: true })
+    position: string; // chức vụ
+
+    @Column({
+        name: 'guest_type',
+        type: 'enum',
+        enum: GuestType,
+        default: GuestType.GUEST,
+    })
+    guestType: GuestType;
+
+    @Column({ nullable: true })
+    avatar: string; // URL hoặc path ảnh
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
+}

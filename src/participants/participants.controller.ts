@@ -1,10 +1,20 @@
-import { Controller, Post, Get, Body, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseInterceptors, UploadedFile, BadRequestException, Param } from '@nestjs/common';
 import { ParticipantsService } from './participants.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as XLSX from 'xlsx';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Participant } from './participant.entity';
 @Controller('participants')
 export class ParticipantsController {
-    constructor(private readonly service: ParticipantsService) { }
+    constructor(
+        private readonly service: ParticipantsService,
+        @InjectRepository(Participant)
+        private readonly repo: Repository<Participant>,
+    ) { }
 
     // FE nạp danh sách
     @Post('import')
@@ -61,4 +71,42 @@ export class ParticipantsController {
     getCheckedIn() {
         return this.service.getCheckedIn();
     }
+    @Post('checkin/avatar/:id')
+    @UseInterceptors(
+        FileInterceptor('file', {
+            storage: diskStorage({
+                destination: './public/uploads/checkin',
+                filename: (req, file, cb) => {
+                    const ext = extname(file.originalname);
+                    const filename = `checkin_${Date.now()}${ext}`;
+                    cb(null, filename);
+                },
+            }),
+            fileFilter: (req, file, cb) => {
+                if (!file.mimetype.startsWith('image/')) {
+                    return cb(new BadRequestException('Chỉ cho phép ảnh'), false);
+                }
+                cb(null, true);
+            },
+        }),
+    )
+    async uploadCheckinAvatar(
+        @Param('id') id: number,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        const participant = await this.repo.findOneBy({ id });
+
+        if (!participant) {
+            throw new BadRequestException('Không tìm thấy người tham gia');
+        }
+
+        participant.avatar = `/uploads/checkin/${file.filename}`;
+        await this.repo.save(participant);
+
+        return {
+            message: 'Upload ảnh thành công',
+            avatar: participant.avatar,
+        };
+    }
+
 }
