@@ -66,6 +66,10 @@ export class ParticipantsController {
     async sendInviteToAll() {
         return this.service.sendInviteEmailToAll();
     }
+    @Post('send-invite-all-ichi')
+    async sendInviteToAllIchi() {
+        return this.service.sendInviteEmailToAllIchi();
+    }
     @Get('checked-in')
     getCheckedIn() {
         return this.service.getCheckedIn();

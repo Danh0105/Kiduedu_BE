@@ -307,6 +307,8 @@ export class EmailQueueProcessor extends WorkerHost {
     checkinUrl: string,
     qrImage: string,
   ): string {
+    const fileName = `QR-Checkin-${fullName.replace(/\s+/g, "_")}.png`;
+
     return `
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:40px 0;">
 <tr>
@@ -317,32 +319,94 @@ style="background:#ffffff;border-radius:10px;overflow:hidden;
 box-shadow:0 6px 20px rgba(0,0,0,0.08);font-family:Arial">
 
 <tr>
-<td style="background:#2de42f4d;padding:20px;text-align:center;">
-  <img src="https://www.kidoedu.edu.vn/static/media/Logo.b35816c78d7c3753c12d.png"
-       width="120" />
-</td>
+  <td
+    align="center"
+    style="
+      background:#c62828;
+      padding:5px;
+      text-align:center;
+    "
+  >
+    <div style="
+         width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    margin: auto;
+    ">
+      <img
+        src="https://ichiskill.com/thumbs/104x126x1/upload/photo/logo03-1987.png"
+        style="
+             object-fit: contain;
+    max-width: 80%;
+    max-height: 80%;
+    /* display: block; */
+    width: 70px;
+    height: 70px;
+    /* border-radius: 50%; */
+    background: #ffffff;
+    display: flex;
+    margin: auto;
+        "
+      />
+    </div>
+  </td>
 </tr>
 
+
 <tr>
-<td style="padding:30px;color:#212529;">
+<td style="
+  padding:30px;
+  background:#fff8e1;
+  color:#7a4a00;
+">
+
   <h2>🎉 Thư mời Year End Party 🎉</h2>
 
   <p>Xin chào <b>${fullName}</b>,</p>
 
   <p>
-    Kido trân trọng kính mời bạn tham dự <b>Year End Party 2025</b>.
+    Ichi Skill trân trọng kính mời bạn tham dự <b>Year End Party 2025</b>.
   </p>
 
   <ul>
-    <li><b>⏰ Thời gian:</b> 10:00 – 12:00, 01/02/2026</li>
-    <li><b>📍 Địa điểm:</b>OSCAR PALACE</li>
-    <li><b>👔 Dress code:</b> Smart Casual</li>
+    <li><b>⏰ Thời gian:</b> 10:00, 01/02/2026</li>
+    <li><b>📍 Địa điểm:</b> OSCAR PALACE 100 Phan Huy Ích, P.15, Tân Bình, TP.HCM</li>
+    <li><b>👔 Dress code:</b> Black - White</li>
   </ul>
 
-  <p><b>Vui lòng mang theo mã QR bên dưới để check-in:</b></p>
+<p style="
+  background:#fff3cd;
+  border-left:6px solid #ffc107;
+  padding:12px 16px;
+  border-radius:6px;
+  font-size:15px;
+  color:#856404;
+  font-weight:bold;
+  margin:20px 0;
+">
+  ⚠️ Vui lòng mang theo mã QR bên dưới để check-in
+</p>
 
   <div style="text-align:center;margin:20px 0;">
-    <img src="${qrImage}" width="220" />
+    <img src="${qrImage}" width="220" style="display:block;margin:auto;" />
+
+    <div style="margin-top:12px;">
+      <a href="${qrImage}"
+         download="${fileName}"
+         style="
+           display:inline-block;
+           padding:10px 18px;
+           background:#2de42f;
+           color:#000;
+           text-decoration:none;
+           border-radius:6px;
+           font-weight:bold;
+         ">
+        ⬇️ Tải QR code
+      </a>
+    </div>
   </div>
 
   <p style="text-align:center">
@@ -361,7 +425,7 @@ box-shadow:0 6px 20px rgba(0,0,0,0.08);font-family:Arial">
 <tr>
 <td style="background:#f1f3f5;padding:15px;text-align:center;
 color:#6c757d;font-size:13px;">
-© ${new Date().getFullYear()} Kido — All rights reserved
+© ${new Date().getFullYear()} Ichi Skill — All rights reserved
 </td>
 </tr>
 
@@ -372,6 +436,7 @@ color:#6c757d;font-size:13px;">
 </table>
 `;
   }
+
 
 
 

@@ -159,6 +159,28 @@ export class ParticipantsService {
             sent: participants.length,
         };
     }
+
+
+
+    async sendInviteEmailToAllIchi() {
+        const participants = await this.repo.find({
+            where: {
+                guestType: "ichiskill",
+            },
+        });
+
+        for (const p of participants) {
+            await this.emailQueueService.addYepInvitationJob({
+                email: p.email,
+                fullName: p.fullName,
+                qrCode: p.qrCode,
+            });
+        }
+
+        return {
+            sent: participants.length,
+        };
+    }
     async getCheckedIn() {
         return this.repo.find({
             where: { isCheckedIn: true },
