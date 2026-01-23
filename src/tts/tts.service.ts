@@ -1,49 +1,58 @@
+import axios from "axios";
 import { Injectable } from "@nestjs/common";
-import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 
 @Injectable()
 export class TtsService {
-    private speechConfig: sdk.SpeechConfig;
+    private token?: string;
+    private tokenExpire = 0;
 
-    constructor() {
-        this.speechConfig = sdk.SpeechConfig.fromSubscription(
-            process.env.AZURE_SPEECH_KEY!,
-            process.env.AZURE_SPEECH_REGION!
+    private async getToken() {
+        if (this.token && Date.now() < this.tokenExpire) {
+            return this.token;
+        }
+
+        const res = await axios.post(
+            `https://${process.env.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+            null,
+            {
+                headers: {
+                    "Ocp-Apim-Subscription-Key":
+                        process.env.AZURE_SPEECH_KEY!,
+                },
+            }
         );
 
-        this.speechConfig.speechSynthesisVoiceName =
-            "vi-VN-HoaiMyNeural";
+        this.token = res.data;
+        this.tokenExpire = Date.now() + 9 * 60 * 1000; // 9 phút
 
-        this.speechConfig.speechSynthesisOutputFormat =
-            sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+        return this.token;
     }
 
-    speak(text: string): Promise<Buffer> {
-        return new Promise((resolve, reject) => {
-            const audioStream = sdk.AudioOutputStream.createPullStream();
-            const audioConfig = sdk.AudioConfig.fromStreamOutput(audioStream);
+    async speak(text: string): Promise<Buffer> {
+        const ssml = `
+<speak version="1.0" xml:lang="vi-VN">
+  <voice name="vi-VN-HoaiMyNeural">
+    ${text}
+  </voice>
+</speak>`;
 
-            const synthesizer = new sdk.SpeechSynthesizer(
-                this.speechConfig,
-                audioConfig
-            );
-
-            synthesizer.speakTextAsync(
-                text,
-                result => {
-                    synthesizer.close();
-
-                    if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-                        resolve(Buffer.from(result.audioData));
-                    } else {
-                        reject(result.errorDetails);
-                    }
+        const res = await axios.post(
+            `https://${process.env.AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`,
+            ssml,
+            {
+                responseType: "arraybuffer",
+                timeout: 10000,
+                headers: {
+                    "Ocp-Apim-Subscription-Key": process.env.AZURE_SPEECH_KEY!,
+                    "Content-Type": "application/ssml+xml; charset=utf-8",
+                    "X-Microsoft-OutputFormat":
+                        "audio-16khz-32kbitrate-mono-mp3",
+                    "User-Agent": "nestjs-tts",
                 },
-                err => {
-                    synthesizer.close();
-                    reject(err);
-                }
-            );
-        });
+            }
+        );
+
+        return Buffer.from(res.data);
     }
+
 }

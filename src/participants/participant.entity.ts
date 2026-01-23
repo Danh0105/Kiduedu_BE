@@ -5,12 +5,7 @@ import {
     CreateDateColumn,
 } from 'typeorm';
 
-export enum GuestType {
-    VIP = 'VIP',
-    PARTNER = 'PARTNER',
-    INTERNAL = 'INTERNAL',
-    GUEST = 'GUEST',
-}
+
 
 @Entity('participants')
 export class Participant {
@@ -20,7 +15,7 @@ export class Participant {
     @Column({ name: 'full_name', length: 100 })
     fullName: string;
 
-    @Column({ length: 150, unique: true })
+    @Column({ length: 150, unique: true, nullable: true })
     email: string;
 
     @Column({ name: 'qr_code', length: 255, unique: true, nullable: true })
@@ -46,15 +41,16 @@ export class Participant {
 
     @Column({
         name: 'guest_type',
-        type: 'enum',
-        enum: GuestType,
-        default: GuestType.GUEST,
+        nullable: true
     })
-    guestType: GuestType;
+    guestType: string;
 
     @Column({ nullable: true })
     avatar: string; // URL hoặc path ảnh
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
+
+    @Column({ length: 100, nullable: true })
+    department: string; // bộ phận công tác
 }

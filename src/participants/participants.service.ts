@@ -11,22 +11,29 @@ export class ParticipantsService {
         private readonly repo: Repository<Participant>,
         private readonly emailQueueService: EmailQueueService,
     ) { }
+    async createOne(dto: any) {
 
-    // FE gửi danh sách người tham gia
-    async import(list: { fullName: string; birthDate: string }[]) {
-        if (!Array.isArray(list) || list.length === 0) {
-            throw new BadRequestException('Danh sách không hợp lệ');
-        }
+        console.log(dto);
 
-        const entities = list.map(item =>
-            this.repo.create({
-                fullName: item.fullName.trim(),
-            }),
-        );
 
-        await this.repo.save(entities);
-        return this.getRemaining();
+        const participant = this.repo.create({
+            fullName: dto.fullName.trim(),
+            position: dto.position ? dto.position.trim() : null,
+            qrCode: uuidv4(),
+            guestType: "khachmoi"
+        });
+
+        await this.repo.save(participant);
+
+        // 👉 TRẢ QR + DATA
+        return {
+            id: participant.id,
+            fullName: participant.fullName,
+            qrCode: participant.qrCode,
+        };
     }
+
+
 
     // Danh sách còn trong vòng quay
     async getRemaining() {
@@ -84,7 +91,10 @@ export class ParticipantsService {
                 this.repo.create({
                     fullName: row.fullName.trim(),
                     email,
-                    qrCode: uuidv4(), // ⭐ gen mã QR
+                    qrCode: uuidv4(),
+                    department: row.department ? row.department.toString().trim() : null,
+                    position: row.position ? row.position.toString().trim() : null,
+                    guestType: row.guestType ? row.guestType.toString().trim() : null,
                 }),
             );
         }

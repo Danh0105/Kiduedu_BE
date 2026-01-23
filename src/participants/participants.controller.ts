@@ -15,12 +15,11 @@ export class ParticipantsController {
         @InjectRepository(Participant)
         private readonly repo: Repository<Participant>,
     ) { }
-
-    // FE nạp danh sách
-    @Post('import')
-    import(@Body() body) {
-        return this.service.import(body);
+    @Post()
+    create(@Body() body: any) {
+        return this.service.createOne(body);
     }
+
 
     // FE lấy danh sách hiển thị vòng quay
     @Get()
