@@ -26,6 +26,7 @@ import { NotifyBillModule } from './viettinbank/notify-bill/notify-bill.module';
 import { VietQrModule } from './viettinbank/vietqr/vietqr.module';
 import { SpinsModule } from './spins/spins.module';
 import { ParticipantsModule } from './participants/participants.module';
+import { TtsModule } from './tts/tts.module';
 
 @Module({
   imports: [
@@ -98,7 +99,8 @@ import { ParticipantsModule } from './participants/participants.module';
     ChatbotModule,
     NotifyBillModule,
     VietQrModule,
-    ParticipantsModule
+    ParticipantsModule,
+    TtsModule
   ],
   controllers: [AppController],
   providers: [AppService],
