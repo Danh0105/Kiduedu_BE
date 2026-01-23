@@ -293,7 +293,7 @@ export class EmailQueueProcessor extends WorkerHost {
     );
 
     const result = await transporter.sendMail({
-      from: `Kido YEP <${MAIL_USER}>`,
+      from: `Ichi Skill YEP <${MAIL_USER}>`,
       to: data.email,
       subject: "🎉 Thư mời tham dự Year End Party 2026",
       html,
