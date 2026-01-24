@@ -1,10 +1,10 @@
-import { Controller, Post, Get, Body, UseInterceptors, UploadedFile, BadRequestException, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseInterceptors, UploadedFile, BadRequestException, Param,Query,Res } from '@nestjs/common';
 import { ParticipantsService } from './participants.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as XLSX from 'xlsx';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-
+import type { Response } from "express";
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Participant } from './participant.entity';
@@ -56,7 +56,17 @@ export class ParticipantsController {
 
         return this.service.importFromFile(rows);
     }
+@Get("checkin")
+  redirectCheckin(
+    @Query("code") code: string,
+    @Res() res: Response
+  ) {
+    const targetUrl =
+      "https://www.kidoedu.edu.vn/checkin" +
+      (code ? `?code=${encodeURIComponent(code)}` : "");
 
+    return res.redirect(301, targetUrl);
+  }
     @Post('checkin')
     async checkin(@Body('qrCode') qrCode: string) {
         return this.service.checkInByQr(qrCode);
