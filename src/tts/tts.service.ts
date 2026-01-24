@@ -12,7 +12,7 @@ export class TtsService {
         }
 
         const res = await axios.post(
-            `https://${process.env.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+            `https://southeastasia.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
             null,
             {
                 headers: {
