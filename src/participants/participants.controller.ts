@@ -61,7 +61,10 @@ export class ParticipantsController {
     async checkin(@Body('qrCode') qrCode: string) {
         return this.service.checkInByQr(qrCode);
     }
-
+    @Post(':id/send-invite')
+    async sendInviteEmail(@Param('id') id: number) {
+        return this.service.sendInviteEmail(id);
+    }
     @Post('send-invite-all')
     async sendInviteToAll() {
         return this.service.sendInviteEmailToAll();
