@@ -281,7 +281,7 @@ export class EmailQueueProcessor extends WorkerHost {
     const transporter = await this.getTransporter(MAIL_USER, MAIL_PASS);
 
     const checkinUrl =
-      `https://www.kidoedu.vn/checkin?code=${data.qrCode}`;
+      `https://www.kidoedu.edu.vn/checkin?code=${data.qrCode}`;
 
     const qrImage =
       `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(checkinUrl)}`;
