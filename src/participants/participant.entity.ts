@@ -36,7 +36,7 @@ export class Participant {
     isForcedWinner: boolean;
 
     /* ===== THÔNG TIN KHÁCH MỜI ===== */
-    @Column({ length: 100, nullable: true })
+    @Column({ length: 200, nullable: true })
     position: string; // chức vụ
 
     @Column({
