@@ -30,6 +30,9 @@ export class Participant {
     @Column({ name: 'is_winner', default: false })
     isWinner: boolean;
 
+    @Column({ name: 'is_forced_winner', default: false })
+    isForcedWinner: boolean;
+
     @Column({ length: 200, nullable: true })
     position: string;
 
