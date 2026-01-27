@@ -21,23 +21,20 @@ export class Participant {
     @Column({ name: 'qr_code', length: 255, unique: true, nullable: true })
     qrCode: string;
 
-    /* ===== CHECK-IN ===== */
     @Column({ name: 'is_checked_in', default: false })
     isCheckedIn: boolean;
 
     @Column({ name: 'checked_in_at', type: 'timestamp', nullable: true })
     checkedInAt: Date;
 
-    /* ===== TRÚNG THƯỞNG ===== */
     @Column({ name: 'is_winner', default: false })
     isWinner: boolean;
 
     @Column({ name: 'is_forced_winner', default: false })
     isForcedWinner: boolean;
 
-    /* ===== THÔNG TIN KHÁCH MỜI ===== */
     @Column({ length: 200, nullable: true })
-    position: string; // chức vụ
+    position: string;
 
     @Column({
         name: 'guest_type',
@@ -46,11 +43,11 @@ export class Participant {
     guestType: string;
 
     @Column({ nullable: true })
-    avatar: string; // URL hoặc path ảnh
+    avatar: string;
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 
     @Column({ length: 100, nullable: true })
-    department: string; // bộ phận công tác
+    department: string;
 }
